@@ -132,7 +132,10 @@ export interface Client {
   logoDataUrl: string;
   english: EnglishVariant;
   description: string;
+  website?: string;
   createdAt: number;
+  /** Last change; used to merge with Google Drive. Older clients only have createdAt. */
+  updatedAt?: number;
 }
 
 export interface MetricBlock {

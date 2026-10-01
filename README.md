@@ -41,6 +41,17 @@ Every push to the main branch rebuilds the site (`.github/workflows/pages.yml`).
 
 If the site doesn't load the first time, open *Settings → Pages* and set the source to the `gh-pages` branch, `/ (root)`.
 
+### Google Drive sync
+
+Reports are saved in the portal and sync automatically to a shared Google Drive
+folder (every minute and after each change). One-time setup:
+[GOOGLE_DRIVE_SETUP.md](GOOGLE_DRIVE_SETUP.md).
+
+### Client website
+
+On the client form, enter the website and click **Fetch from website**. Claude reads
+the site and fills in what the client does, which it then uses when writing reports.
+
 ## Running with a server (optional)
 
 ```bash

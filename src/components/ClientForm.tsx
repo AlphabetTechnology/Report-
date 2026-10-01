@@ -3,6 +3,7 @@
 
 import { useRef, useState } from "react";
 import Icon from "@/components/Icon";
+import { readWebsite } from "@/lib/api";
 import { prepareImage, trimLogo } from "@/lib/image";
 import { newId, saveClient } from "@/lib/store";
 import type { Client, EnglishVariant } from "@/lib/types";
@@ -36,6 +37,8 @@ export default function ClientForm({
   const [logo, setLogo] = useState(client?.logoDataUrl ?? "");
   const [english, setEnglish] = useState<EnglishVariant>(client?.english ?? "en-GB");
   const [description, setDescription] = useState(client?.description ?? "");
+  const [website, setWebsite] = useState(client?.website ?? "");
+  const [reading, setReading] = useState(false);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -46,6 +49,20 @@ export default function ClientForm({
       setLogo((await trimLogo(img.dataUrl)).dataUrl);
     } catch {
       setError("Could not read that image.");
+    }
+  }
+
+  async function fetchFromWebsite() {
+    setReading(true);
+    setError("");
+    try {
+      const r = await readWebsite({ url: website, english });
+      setDescription(r.description);
+      if (!name.trim() && r.businessName) setName(r.businessName);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not read the website");
+    } finally {
+      setReading(false);
     }
   }
 
@@ -61,6 +78,7 @@ export default function ClientForm({
       logoDataUrl: logo,
       english,
       description: description.trim(),
+      website: website.trim(),
     };
     await saveClient(saved);
     onSaved(saved);
@@ -122,8 +140,23 @@ export default function ClientForm({
               ))}
             </div>
           </div>
+          <div className="field">
+            <span>Website</span>
+            <div className="row">
+              <input
+                className="input"
+                placeholder="www.example.com"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+              />
+              <button className="btn accent" disabled={!website.trim() || reading} onClick={fetchFromWebsite}>
+                {reading ? <span className="spinner" /> : <Icon name="sparkles" size={16} />}
+                {reading ? "Reading…" : "Fetch from website"}
+              </button>
+            </div>
+          </div>
           <label className="field">
-            <span>What the client does (helps Claude write relevant text)</span>
+            <span>What the client does (filled from the website, or type it; Claude uses it when writing)</span>
             <textarea
               className="textarea"
               value={description}

@@ -2,6 +2,7 @@
 
 import type { Analysis } from "./ai/analyze";
 import type { ProofreadRequest, RawSuggestion } from "./ai/proofread";
+import type { WebsiteRequest, WebsiteSummary } from "./ai/website";
 import type { WriteRequest } from "./ai/write";
 import type { ReportText } from "./types";
 
@@ -86,6 +87,12 @@ export async function proofread(body: ProofreadRequest): Promise<{ suggestions: 
   if (!DIRECT_AI) return postJson("/api/proofread", body);
   const { proofreadReport } = await import("./ai/proofread");
   return direct(async () => proofreadReport(await browserClient(), body));
+}
+
+export async function readWebsite(body: WebsiteRequest): Promise<WebsiteSummary> {
+  if (!DIRECT_AI) return postJson("/api/website", body);
+  const { describeWebsite } = await import("./ai/website");
+  return direct(async () => describeWebsite(await browserClient(), body));
 }
 
 /** Run `fn` over `items` with at most `limit` running at once. */

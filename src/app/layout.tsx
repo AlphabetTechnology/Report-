@@ -9,7 +9,7 @@ import "@fontsource/noto-sans/400-italic.css";
 import "@fontsource/noto-sans/600.css";
 import "@fontsource/noto-sans/700.css";
 import "@fontsource/roboto/900.css";
-import KeyDialog from "@/components/KeyDialog";
+import SettingsDialog from "@/components/SettingsDialog";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,7 +22,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en">
       <body>
         {children}
-        <KeyDialog />
+        <SettingsDialog />
       </body>
     </html>
   );

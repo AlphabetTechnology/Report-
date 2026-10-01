@@ -7,11 +7,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ClientForm, { ClientLogo, ENGLISH_LABEL } from "@/components/ClientForm";
 import DateField from "@/components/DateField";
 import Icon, { type IconName } from "@/components/Icon";
+import { openSettings } from "@/components/SettingsDialog";
+import SyncBadge from "@/components/SyncBadge";
 import { PlatformIcon } from "@/components/report/icons";
-import { askForKey, DIRECT_AI } from "@/lib/api";
 import { formatMonth, formatPeriod, formatShortDate, MONTH_NAMES, previousMonth, toIso } from "@/lib/format";
 import { reportProgress } from "@/lib/progress";
 import {
+  DATA_CHANGED,
   deleteClient,
   deleteReport,
   exportAll,
@@ -300,9 +302,11 @@ export default function Home() {
   }
 
   useEffect(() => {
-    // Initial load from IndexedDB.
+    // Initial load from IndexedDB, then again whenever Drive sync brings changes.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
+    window.addEventListener(DATA_CHANGED, refresh);
+    return () => window.removeEventListener(DATA_CHANGED, refresh);
   }, []);
 
   const clientById = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
@@ -521,19 +525,18 @@ export default function Home() {
           Import backup
         </button>
         <input ref={importRef} type="file" accept="application/json" hidden onChange={(e) => restore(e.target.files?.[0])} />
-        {DIRECT_AI && (
-          <>
-            <div className="nav-label" style={{ marginTop: 22 }}>
-              Settings
-            </div>
-            <button className="nav-item" onClick={askForKey}>
-              <Icon name="lock" size={18} />
-              API key
-            </button>
-          </>
-        )}
+        <div className="nav-label" style={{ marginTop: 22 }}>
+          Settings
+        </div>
+        <button className="nav-item" onClick={openSettings}>
+          <Icon name="settings" size={18} />
+          API key &amp; Google Drive
+        </button>
         <div className="sidebar-foot">
-          Reports are saved in this browser. Export a backup to share them with a colleague.
+          <SyncBadge dark />
+          <div style={{ marginTop: 10 }}>
+            Reports are saved in this portal first, then synced to the team&apos;s Google Drive folder.
+          </div>
         </div>
       </aside>
 

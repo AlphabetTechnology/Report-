@@ -86,6 +86,7 @@ export default function TextPanel({
         client: {
           name: client?.name ?? "",
           description: client?.description ?? "",
+          website: client?.website ?? "",
           english: client?.english ?? "en-GB",
         },
         period: formatPeriod(report.periodStart, report.periodEnd, client?.english ?? "en-GB"),

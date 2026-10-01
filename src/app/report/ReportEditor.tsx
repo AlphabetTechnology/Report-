@@ -10,10 +10,11 @@ import TextPanel from "@/components/editor/TextPanel";
 import ReportDocument from "@/components/report/ReportDocument";
 import { ClientLogo } from "@/components/ClientForm";
 import Icon, { type IconName } from "@/components/Icon";
-import { askForKey, DIRECT_AI } from "@/lib/api";
+import { openSettings } from "@/components/SettingsDialog";
+import SyncBadge from "@/components/SyncBadge";
 import { formatMonth, formatPeriod, monthName } from "@/lib/format";
 import { reportProgress } from "@/lib/progress";
-import { getReport, listClients, saveReport } from "@/lib/store";
+import { DATA_CHANGED, getReport, listClients, saveReport } from "@/lib/store";
 import type { Client, Report } from "@/lib/types";
 
 const TABS: { key: "details" | "shots" | "text" | "proof"; label: string; icon: IconName }[] = [
@@ -61,6 +62,21 @@ export default function ReportEditor() {
         else if (r.text) setTab("proof");
       }
     });
+  }, [id]);
+
+  // A colleague changed this report and Drive sync brought it in: show it,
+  // unless there are unsaved edits here (those win and sync back up).
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      const ids = (e as CustomEvent<{ ids: string[] }>).detail?.ids ?? [];
+      if (dirty.current) return;
+      if (ids.includes(id)) {
+        getReport(id).then((r) => (r ? setReport(r) : setMissing(true)));
+      }
+      listClients().then(setClients);
+    };
+    window.addEventListener(DATA_CHANGED, onChange);
+    return () => window.removeEventListener(DATA_CHANGED, onChange);
   }, [id]);
 
   const update = useCallback((fn: (r: Report) => Report) => {
@@ -156,11 +172,10 @@ export default function ReportEditor() {
           {saved ? <Icon name="checkCircle" size={15} /> : <span className="spinner" style={{ width: 12, height: 12 }} />}
           {saved ? "Saved" : "Saving"} · {pageCount} pages
         </span>
-        {DIRECT_AI && (
-          <button className="btn ghost icon" title="Anthropic API key" onClick={askForKey}>
-            <Icon name="lock" size={17} />
-          </button>
-        )}
+        <SyncBadge />
+        <button className="btn ghost icon" title="Settings: API key & Google Drive" onClick={openSettings}>
+          <Icon name="settings" size={17} />
+        </button>
         <button className="btn accent" onClick={downloadPdf}>
           <Icon name="download" size={16} />
           Download PDF

@@ -1595,3 +1595,61 @@ textarea {
     border-radius: 0;
   }
 }
+
+/* ---------- Google Drive sync badge ---------- */
+
+.sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sync-badge.ok {
+  color: var(--ok);
+  border-color: #c9ecd9;
+  background: var(--ok-soft);
+}
+
+.sync-badge.warn {
+  color: #b85f00;
+  border-color: #fbd9ad;
+  background: var(--orange-soft);
+}
+
+.sync-badge.err {
+  color: var(--err);
+  border-color: #f6c9c4;
+  background: var(--err-soft);
+}
+
+.sync-badge.dark {
+  width: 100%;
+  justify-content: flex-start;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #c7d4e4;
+}
+
+.sync-badge.dark.ok {
+  color: #6ee7a8;
+}
+
+.sync-badge.dark.warn {
+  color: #ffc27a;
+}
+
+.sync-badge.dark.err {
+  color: #ff9a8f;
+}

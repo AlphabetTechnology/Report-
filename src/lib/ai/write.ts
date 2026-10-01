@@ -45,7 +45,7 @@ const WriteSchema = z.object({
 });
 
 export interface WriteRequest {
-  client: { name: string; description: string; english: "en-GB" | "en-US" };
+  client: { name: string; description: string; website?: string; english: "en-GB" | "en-US" };
   period: string;
   month: string;
   platforms: string[];
@@ -90,6 +90,7 @@ export async function writeReport(client: Anthropic, body: WriteRequest): Promis
   const data = {
     client: body.client.name,
     aboutClient: body.client.description || "(no description given)",
+    website: body.client.website || undefined,
     reportingPeriod: body.period,
     month: body.month,
     platforms: body.platforms,

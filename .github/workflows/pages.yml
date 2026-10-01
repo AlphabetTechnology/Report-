@@ -38,6 +38,8 @@ jobs:
           STATIC_EXPORT: "1"
           NEXT_PUBLIC_DIRECT_AI: "1"
           NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+          # Optional default for everyone: Settings → Secrets and variables → Actions → Variables.
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
 
       - name: Publish to gh-pages branch
         run: |
