@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element -- report pages are printed, plain <img> keeps them exact */
-import { Fragment, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import {
   PLATFORM_LABEL,
   SECTIONS,
@@ -10,6 +10,9 @@ import {
   type ShotSection,
 } from "@/lib/types";
 import { Badge, PLATFORM_BAR, PLATFORM_RING, PlatformIcon } from "./icons";
+import { inline, Rich } from "./richtext";
+
+export { Rich };
 
 export interface Unit {
   key: string;
@@ -28,38 +31,6 @@ export interface BuiltSection {
 }
 
 /* ---------- text helpers ---------- */
-
-function inline(text: string): ReactNode[] {
-  // **bold** markers, as used in the SWS reports.
-  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-    part.startsWith("**") && part.endsWith("**") ? (
-      <strong key={i}>{part.slice(2, -2)}</strong>
-    ) : (
-      <Fragment key={i}>{part}</Fragment>
-    ),
-  );
-}
-
-export function Rich({ text }: { text: string }) {
-  const paras = text
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-  return (
-    <>
-      {paras.map((p, i) => (
-        <p key={i}>
-          {p.split("\n").map((line, j) => (
-            <Fragment key={j}>
-              {j > 0 && <br />}
-              {inline(line)}
-            </Fragment>
-          ))}
-        </p>
-      ))}
-    </>
-  );
-}
 
 const Placeholder = () => (
   <p style={{ color: "#9aa3ad", fontStyle: "italic" }}>
@@ -82,7 +53,7 @@ function limitsFor(shot: Shot) {
   if (shot.kind === "demographics" || shot.kind === "locations") return { maxW: 176, maxH: 205 };
   if (WIDE_KINDS.has(shot.kind)) return { maxW: 176, maxH: 110 };
   if (shot.kind === "content_overview") return { maxW: 150, maxH: 86 };
-  return { maxW: 122, maxH: 78 };
+  return { maxW: 118, maxH: 70 };
 }
 
 function ShotImg({ shot, w, h }: { shot: Shot; w: number; h: number }) {
@@ -223,14 +194,52 @@ function shotUnits(
   return units;
 }
 
-function MetricLines({ metrics }: { metrics: { label: string; value: string }[] }) {
+/** Headline numbers as stat cards: small label, big brand-coloured value. */
+function StatTiles({ metrics, platform }: { metrics: { label: string; value: string }[]; platform?: Platform | null }) {
   if (!metrics.length) return null;
+  const accent = platform ? PLATFORM_RING[platform] : "#1471b9";
   return (
-    <div className="rpt-metrics">
+    <div className="rpt-stats">
       {metrics.map((m, i) => (
-        <div key={i}>
-          <strong>{m.label}:</strong>
-          {m.value}
+        <div className="rpt-stat" key={i} style={{ borderLeftColor: accent }}>
+          <span className="lbl">{m.label}</span>
+          <span className="val">{m.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Executive summary strip: each platform's headline numbers side by side. */
+function AtAGlance({ report }: { report: Report }) {
+  const t = report.text;
+  if (!t) return null;
+  const pick = (p: Platform) => {
+    const all = t.blocks.filter((b) => b.platform === p).flatMap((b) => b.metrics);
+    const want = [/^views$|platform views|^views/i, /reach|viewers/i, /interaction/i, /visit/i];
+    const chosen: { label: string; value: string }[] = [];
+    for (const rx of want) {
+      const m = all.find((x) => rx.test(x.label) && !chosen.includes(x));
+      if (m) chosen.push(m);
+    }
+    return chosen;
+  };
+  const rows = orderedPlatforms(report)
+    .map((p) => ({ p, metrics: pick(p) }))
+    .filter((r) => r.metrics.length);
+  if (!rows.length) return null;
+  return (
+    <div className="rpt-glance">
+      <div className="rpt-glance-title">At a glance</div>
+      {rows.map(({ p, metrics }) => (
+        <div className="rpt-glance-row" key={p}>
+          <div className="rpt-glance-plat">
+            <span className="ic">
+              <PlatformIcon platform={p} />
+            </span>
+            {PLATFORM_LABEL[p]}
+          </div>
+          <StatTiles metrics={metrics} platform={p} />
         </div>
       ))}
     </div>
@@ -267,6 +276,7 @@ function buildExecutive(report: Report): Unit[] {
   const text = report.text?.executiveSummary;
   const units: Unit[] = [
     { key: "exec-text", node: text ? <Rich text={text} /> : <Placeholder /> },
+    { key: "exec-glance", node: <AtAGlance report={report} /> },
   ];
   for (const p of [...orderedPlatforms(report), null]) {
     units.push(...shotUnits(`exec-${p}`, shotsFor(report, "executive", p), p, true, null));
@@ -295,7 +305,7 @@ function buildMetricSection(
           <h2 className="rpt-platform-title">{PLATFORM_LABEL[p]}</h2>
           {block ? (
             <>
-              <MetricLines metrics={block.metrics} />
+              <StatTiles metrics={block.metrics} platform={p} />
               {block.text && <Rich text={block.text} />}
             </>
           ) : (
@@ -335,17 +345,7 @@ function buildAudience(report: Report): Unit[] {
       keepWithNext: demo.length > 0,
       node: a ? (
         <>
-          <MetricLines metrics={a.metrics} />
-          {a.gender.length > 0 && (
-            <div className="rpt-metrics">
-              <strong>Gender Split:</strong>
-              {a.gender.map((g, i) => (
-                <div key={i}>
-                  {g.label}: {g.value}
-                </div>
-              ))}
-            </div>
-          )}
+          <StatTiles metrics={[...a.metrics, ...a.gender]} platform={p} />
           {a.text && <Rich text={a.text} />}
         </>
       ) : (
@@ -368,7 +368,7 @@ function buildAudience(report: Report): Unit[] {
               <ul className="rpt-bullets">
                 {a.locations.map((l, i) => (
                   <li key={i}>
-                    {l.name} – {l.value}
+                    {inline(`${l.name} – ${l.value}`)}
                   </li>
                 ))}
               </ul>
@@ -390,7 +390,7 @@ function buildAudience(report: Report): Unit[] {
                 <ul className="rpt-bullets">
                   {a.countries.map((l, i) => (
                     <li key={i}>
-                      {l.name} – {l.value}
+                      {inline(`${l.name} – ${l.value}`)}
                     </li>
                   ))}
                 </ul>
@@ -423,7 +423,7 @@ function buildTopContent(report: Report): Unit[] {
             <>
               {t.items.map((it, i) => (
                 <div className="rpt-top-item" key={i}>
-                  <strong>{it.title} —</strong> {it.detail}
+                  <strong>{inline(it.title)} —</strong> {inline(it.detail)}
                 </div>
               ))}
               {t.summary && (
@@ -451,15 +451,16 @@ function buildFocus(report: Report): Unit[] {
     key: `focus-${i}`,
     node: (
       <div className="rpt-focus">
-        <h3>{f.title}</h3>
-        <div className="rpt-focus-body">
-          <div>
-            <strong>Current Situation:</strong>
-            {f.situation}
+        <div className="rpt-focus-num">{String(i + 1).padStart(2, "0")}</div>
+        <div className="rpt-focus-main">
+          <h3>{inline(f.title)}</h3>
+          <div className="rpt-focus-row situation">
+            <span className="tag">Current Situation</span>
+            <span>{inline(f.situation)}</span>
           </div>
-          <div>
-            <strong>Implementation:</strong>
-            {f.implementation}
+          <div className="rpt-focus-row action">
+            <span className="tag">Implementation</span>
+            <span>{inline(f.implementation)}</span>
           </div>
         </div>
       </div>

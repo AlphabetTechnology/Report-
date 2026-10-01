@@ -142,7 +142,7 @@ export default function TextPanel({
         <>
           <h3>Executive Summary</h3>
           <p className="small muted" style={{ marginTop: -4 }}>
-            Wrap words in **double asterisks** to make them bold.
+            Wrap key phrases in **double asterisks** to make them bold. Numbers are highlighted in blue automatically.
           </p>
           <AutoText rows={8} value={t.executiveSummary} onChange={(v) => set("executiveSummary", v)} />
 

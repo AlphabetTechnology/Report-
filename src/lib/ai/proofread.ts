@@ -41,6 +41,7 @@ Check every field for:
 Rules:
 - "original" must be an exact substring of that field's text (copy it character for character, including **bold markers**), short but long enough to be unique in that field.
 - "replacement" is the corrected version of exactly that substring.
+- Keep **bold markers** intact: never remove them, and keep them around the same phrase.
 - Keep the agency's meaning and tone; do not rewrite sentences that are already correct. Only suggest a style change when it is a clear improvement.
 - "reason" is a short explanation for the team, e.g. "US spelling; this client uses UK English".
 - Return an empty list if the text is already correct.`;

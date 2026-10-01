@@ -68,8 +68,13 @@ Write in ${variant}. Write dates the ${english === "en-GB" ? "UK way: 14 Septemb
 
 Use only the numbers provided in the screenshot data. Never invent, estimate or round numbers differently. If a number is not provided, leave it out rather than guessing. Do not compare with previous months unless the data includes previous figures.
 
+Formatting (the report must not read as a wall of plain text):
+- In EVERY paragraph (executive summary, each block text, audience texts, top content summaries, focus situation and implementation, conclusion), wrap the 1–2 most important phrases in **double asterisks** so they print in bold: the content themes that worked, the key finding, or the action. Bold short phrases (2–8 words), never whole sentences, never more than two per paragraph.
+- Numbers are highlighted automatically by the template, so don't bold a number on its own; bold it only as part of a key phrase, e.g. **1,418 platform views**.
+- List each figure once. When Meta shows Instagram "Views 1.5K" made of 35 Facebook views and 1,418 Instagram views, the Instagram Views metric is 1,418; don't also list the 1.5K combined total.
+
 What to produce:
-- executiveSummary: two short paragraphs separated by a blank line. First: overall picture for the month and which content themes worked. Second: headline numbers per platform. Wrap the key numbers and key themes in **double asterisks** for bold, as in the example.
+- executiveSummary: two short paragraphs separated by a blank line. First: overall picture for the month and which content themes worked. Second: headline numbers per platform. Bold the key themes and headline figures with **double asterisks**, as in the example.
 - blocks: one entry per platform for each of the sections reach, views, engagement and visits that has data for that platform. metrics are the figures to list for that section (label in Title Case, value exactly as given), e.g. reach → Viewers or Reach; views → Views, 3-Second Video Views, Watch Time; engagement → Content Interactions, Likes, Comments, Shares; visits → Page Visits or Profile Visits, New Follows. text is one or two sentences (about 20–35 words) interpreting the numbers. Skip a platform/section with no data.
 - audience: one entry per platform with demographic or location data. metrics such as Lifetime Followers; gender as given; text one or two sentences on age and gender (mention the strongest age range); locations = the top 5 cities, countries = the top 5 countries, exactly as given; locationsText one or two sentences on where the audience is.
 - topContent: one entry per platform with top posts. items: up to 5 posts, title in Title Case, quoted when it is a caption (e.g. "Communication Starts Before First Words") or a descriptive name for festival/occasion posts (e.g. Ganesh Chaturthi Content); detail like "193 views and 5 likes." summary: one sentence on the themes that worked, with the key themes in **bold**.
