@@ -206,6 +206,58 @@ export default function TextPanel({
             </div>
           ))}
 
+          <h3>Activities &amp; Engagement</h3>
+          <p className="small muted" style={{ marginTop: -4 }}>
+            The work you did this month. Add screenshots of posts, replies or reviews and pick “Activities &amp;
+            Engagement” as their section.
+          </p>
+          <div className="text-group">
+            <AutoText
+              rows={3}
+              value={t.activities?.summary ?? ""}
+              onChange={(v) => set("activities", { summary: v, items: t.activities?.items ?? [] })}
+            />
+            <div className="small muted" style={{ margin: "8px 0 4px" }}>
+              Bullet points
+            </div>
+            {(t.activities?.items ?? []).map((it, i) => (
+              <div className="metric-row" key={i} style={{ gridTemplateColumns: "1fr 32px" }}>
+                <input
+                  className="input"
+                  value={it}
+                  onChange={(e) =>
+                    set("activities", {
+                      summary: t.activities?.summary ?? "",
+                      items: (t.activities?.items ?? []).map((x, j) => (j === i ? e.target.value : x)),
+                    })
+                  }
+                />
+                <button
+                  className="btn small ghost danger"
+                  onClick={() =>
+                    set("activities", {
+                      summary: t.activities?.summary ?? "",
+                      items: (t.activities?.items ?? []).filter((_, j) => j !== i),
+                    })
+                  }
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <button
+              className="btn small ghost"
+              onClick={() =>
+                set("activities", {
+                  summary: t.activities?.summary ?? "",
+                  items: [...(t.activities?.items ?? []), ""],
+                })
+              }
+            >
+              + Add point
+            </button>
+          </div>
+
           <h3>Focus for the Next Month</h3>
           {t.focus.map((f, i) => (
             <div className="text-group" key={`f${i}`}>

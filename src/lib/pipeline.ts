@@ -26,8 +26,9 @@ import {
  * should pick up; reports made with an older version get an "Update" prompt.
  *   3: dashboards cut into cards
  *   4: bold themes, natural tone, one figure per metric
+ *   5: LinkedIn, Pinterest, Google Business Profile; Activities & Engagement
  */
-export const PIPELINE_VERSION = 4;
+export const PIPELINE_VERSION = 5;
 
 export type Update = (fn: (r: Report) => Report) => void;
 

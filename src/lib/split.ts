@@ -160,3 +160,157 @@ export async function crop(dataUrl: string, r: Rect, pad = 0): Promise<{ dataUrl
   canvas.getContext("2d")!.drawImage(img, x, y, w, h, 0, 0, w, h);
   return { dataUrl: canvas.toDataURL("image/png"), width: w, height: h };
 }
+
+/**
+ * Erases Meta's comparison labels ("↓ 99.7%" in red, "↑ 12%" in green) by
+ * painting them over with the card background. Only small, wide clusters of
+ * strong red/green are touched, so logos and charts stay as they are.
+ * Returns the original data URL when nothing was found.
+ */
+export async function eraseChangeLabels(dataUrl: string): Promise<string> {
+  const img = await loadImage(dataUrl);
+  const W = img.width;
+  const H = img.height;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(img, 0, 0);
+  const image = ctx.getImageData(0, 0, W, H);
+  const d = image.data;
+
+  // Strong red or green text pixels.
+  const core = new Uint8Array(W * H);
+  let any = false;
+  for (let i = 0, p = 0; i < core.length; i++, p += 4) {
+    const r = d[p];
+    const g = d[p + 1];
+    const b = d[p + 2];
+    const red = r >= 130 && g <= 90 && b <= 100 && r - g >= 80;
+    const green = g >= 100 && r <= 90 && b <= 120 && g - r >= 50 && g - b >= 20;
+    if (red || green) {
+      core[i] = 1;
+      any = true;
+    }
+  }
+  if (!any) return dataUrl;
+
+  // Group glyphs of one label: join core pixels up to `gap` px apart horizontally.
+  const gap = Math.max(4, Math.round(W * 0.008));
+  const seen = new Uint8Array(W * H);
+  const boxes: { x0: number; y0: number; x1: number; y1: number; n: number }[] = [];
+  const stack: number[] = [];
+  for (let start = 0; start < core.length; start++) {
+    if (!core[start] || seen[start]) continue;
+    let x0 = W, y0 = H, x1 = 0, y1 = 0, n = 0;
+    stack.push(start);
+    seen[start] = 1;
+    while (stack.length) {
+      const i = stack.pop()!;
+      const x = i % W;
+      const y = (i - x) / W;
+      n++;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+      for (let dy = -2; dy <= 2; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= H) continue;
+        for (let dx = -gap; dx <= gap; dx++) {
+          const xx = x + dx;
+          if (xx < 0 || xx >= W) continue;
+          const j = yy * W + xx;
+          if (core[j] && !seen[j]) {
+            seen[j] = 1;
+            stack.push(j);
+          }
+        }
+      }
+    }
+    boxes.push({ x0, y0, x1, y1, n });
+  }
+
+  // Small text breaks into several pieces ("92.3", "%", the arrow): join pieces
+  // on the same line that are no more than a character or two apart.
+  const parent = boxes.map((_, i) => i);
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i];
+      const c = boxes[j];
+      const ha = a.y1 - a.y0 + 1;
+      const hc = c.y1 - c.y0 + 1;
+      const overlap = Math.min(a.y1, c.y1) - Math.max(a.y0, c.y0) + 1;
+      const gapX = Math.max(a.x0, c.x0) - Math.min(a.x1, c.x1) - 1;
+      // Same line, or the top and bottom strokes of the same small text (≤ 2px apart).
+      const sameLine = overlap >= Math.min(ha, hc) * 0.5 || overlap >= -2;
+      if (sameLine && gapX <= Math.max(ha, hc, 6) * 1.6) parent[find(j)] = find(i);
+    }
+  }
+  const merged = new Map<number, (typeof boxes)[number]>();
+  boxes.forEach((b, i) => {
+    const root = find(i);
+    const m = merged.get(root);
+    if (!m) merged.set(root, { ...b });
+    else {
+      m.x0 = Math.min(m.x0, b.x0);
+      m.y0 = Math.min(m.y0, b.y0);
+      m.x1 = Math.max(m.x1, b.x1);
+      m.y1 = Math.max(m.y1, b.y1);
+      m.n += b.n;
+    }
+  });
+  const groups = [...merged.values()];
+
+  const maxH = Math.max(14, Math.round(Math.min(H, 1400) * 0.06));
+  // Instagram's logo contains strong magenta; Meta's labels never do (their
+  // anti-aliased edges can look faintly orange or purple, but not magenta).
+  const nearLogoColours = (b: (typeof boxes)[number]) => {
+    let n = 0;
+    for (let y = Math.max(0, b.y0 - 2); y <= Math.min(H - 1, b.y1 + 2); y++) {
+      for (let x = Math.max(0, b.x0 - 2); x <= Math.min(W - 1, b.x1 + 2); x++) {
+        const p = (y * W + x) * 4;
+        if (d[p] > 150 && d[p + 2] > 150 && d[p + 1] < 70) n++;
+      }
+    }
+    return n >= 3;
+  };
+  // A label is a short, wide run of thin text strokes. Logos (e.g. Instagram's
+  // gradient icon) are solid blocks of colour, so they fail the density test.
+  const labels = groups.filter((b) => {
+    const w = b.x1 - b.x0 + 1;
+    const h = b.y1 - b.y0 + 1;
+    const density = b.n / (w * h);
+    return h >= 5 && h <= maxH && w >= h * 1.8 && b.n >= 8 && density < 0.55 && !nearLogoColours(b);
+  });
+
+  let changed = false;
+  for (const b of labels) {
+    const bh = b.y1 - b.y0 + 1;
+    // Include the ↑/↓ arrow (and any stray coloured pixels) just left of the label.
+    const rx0 = Math.max(0, b.x0 - bh * 3);
+    const ry0 = Math.max(0, b.y0 - 2);
+    const ry1 = Math.min(H - 1, b.y1 + 2);
+    const x1 = b.x1;
+    let x0 = b.x0, y0 = b.y0, y1 = b.y1;
+    for (let y = ry0; y <= ry1; y++) {
+      for (let x = rx0; x < b.x0; x++) {
+        if (!core[y * W + x]) continue;
+        if (x < x0) x0 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+    const pad = Math.max(3, Math.round(bh * 0.3));
+    // Paint with the colour just left of the area (the card background).
+    const sx = Math.max(0, x0 - pad - 2);
+    const sy = Math.min(H - 1, Math.round((y0 + y1) / 2));
+    const sp = (sy * W + sx) * 4;
+    const light = d[sp] + d[sp + 1] + d[sp + 2] > 600;
+    ctx.fillStyle = light ? `rgb(${d[sp]},${d[sp + 1]},${d[sp + 2]})` : "#fff";
+    ctx.fillRect(x0 - pad, y0 - pad, x1 - x0 + 1 + pad * 2, y1 - y0 + 1 + pad * 2);
+    changed = true;
+  }
+  return changed ? canvas.toDataURL("image/png") : dataUrl;
+}

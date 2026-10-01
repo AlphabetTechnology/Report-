@@ -1,4 +1,4 @@
-export const PLATFORMS = ["facebook", "instagram", "tiktok", "youtube"] as const;
+export const PLATFORMS = ["facebook", "instagram", "tiktok", "youtube", "linkedin", "pinterest", "gmb"] as const;
 export type Platform = (typeof PLATFORMS)[number];
 
 export const PLATFORM_LABEL: Record<Platform, string> = {
@@ -6,6 +6,9 @@ export const PLATFORM_LABEL: Record<Platform, string> = {
   instagram: "Instagram",
   tiktok: "TikTok",
   youtube: "YouTube",
+  linkedin: "LinkedIn",
+  pinterest: "Pinterest",
+  gmb: "Google Business Profile",
 };
 
 /** Report sections in the order they appear in the SWS template. */
@@ -17,6 +20,7 @@ export const SECTIONS = [
   { key: "visits", title: "Account Visits" },
   { key: "audience", title: "Audience Overview" },
   { key: "top_content", title: "Top Content" },
+  { key: "activities", title: "Activities & Engagement" },
   { key: "focus", title: "Focus for the Next Month" },
   { key: "conclusion", title: "Conclusion" },
 ] as const;
@@ -31,6 +35,7 @@ export const SHOT_SECTIONS = [
   "visits",
   "audience",
   "top_content",
+  "activities",
 ] as const;
 export type ShotSection = (typeof SHOT_SECTIONS)[number];
 
@@ -46,6 +51,8 @@ export const SHOT_KINDS = [
   "demographics",
   "locations",
   "top_content",
+  "searches",
+  "activity",
   "other",
 ] as const;
 export type ShotKind = (typeof SHOT_KINDS)[number];
@@ -61,6 +68,8 @@ export const SHOT_KIND_LABEL: Record<ShotKind, string> = {
   demographics: "Age & gender",
   locations: "Cities & countries",
   top_content: "Top content",
+  searches: "Searches / search terms",
+  activity: "Activity (posts, replies, reviews)",
   other: "Other",
 };
 
@@ -76,6 +85,8 @@ export const KIND_SECTION: Record<ShotKind, ShotSection> = {
   demographics: "audience",
   locations: "audience",
   top_content: "top_content",
+  searches: "audience",
+  activity: "activities",
   other: "executive",
 };
 
@@ -165,6 +176,12 @@ export interface TopContentBlock {
   summary: string;
 }
 
+/** Work the agency did this month (posts, replies, reviews answered...). */
+export interface Activities {
+  summary: string;
+  items: string[];
+}
+
 export interface FocusItem {
   title: string;
   situation: string;
@@ -176,6 +193,7 @@ export interface ReportText {
   blocks: MetricBlock[];
   audience: AudienceBlock[];
   topContent: TopContentBlock[];
+  activities?: Activities;
   focus: FocusItem[];
   conclusion: string;
 }
@@ -202,6 +220,8 @@ export interface Report {
   suggestions: Suggestion[];
   /** Version of the screenshot-reading/writing steps last used (see lib/pipeline.ts). */
   pipeline?: number;
+  /** Erase Meta's red/green "↓ 99.7%" change labels from screenshots (default on). */
+  hideChanges?: boolean;
   /** When the last proofread ran (cleared when the text is rewritten). */
   proofreadAt?: number;
   createdAt: number;

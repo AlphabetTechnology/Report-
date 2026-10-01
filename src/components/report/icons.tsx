@@ -7,6 +7,9 @@ export const PLATFORM_RING: Record<Platform, string> = {
   instagram: "#f7941f",
   tiktok: "#111111",
   youtube: "#e62117",
+  linkedin: "#0a66c2",
+  pinterest: "#e60023",
+  gmb: "#4285f4",
 };
 
 /** Colour of the "Leading Locations" / "Top Countries" bars per platform. */
@@ -15,6 +18,9 @@ export const PLATFORM_BAR: Record<Platform, "blue" | "orange"> = {
   instagram: "orange",
   tiktok: "blue",
   youtube: "orange",
+  linkedin: "blue",
+  pinterest: "orange",
+  gmb: "blue",
 };
 
 const TIKTOK_PATH =
@@ -50,6 +56,43 @@ function YouTubeIcon() {
   );
 }
 
+function LinkedInIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-label="LinkedIn">
+      <rect width="24" height="24" rx="4.5" fill="#0A66C2" />
+      <rect x="4.6" y="9.4" width="3.3" height="9.8" fill="#fff" />
+      <circle cx="6.25" cy="6.1" r="1.95" fill="#fff" />
+      <path
+        d="M10.2 9.4h3.15v1.45c.5-.9 1.62-1.7 3.2-1.7 3.1 0 3.75 2 3.75 4.65v5.4h-3.3v-4.8c0-1.2-.03-2.65-1.62-2.65-1.62 0-1.88 1.25-1.88 2.55v4.9h-3.3z"
+        fill="#fff"
+      />
+    </svg>
+  );
+}
+
+function PinterestIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-label="Pinterest">
+      <circle cx="12" cy="12" r="12" fill="#E60023" />
+      <path
+        d="M12.3 4.6c-4.2 0-6.4 2.9-6.4 5.4 0 1.5.6 2.8 1.8 3.3.2.1.4 0 .4-.2l.2-.7c.1-.2 0-.3-.1-.5-.4-.4-.6-1-.6-1.8 0-2.3 1.7-4.4 4.5-4.4 2.5 0 3.8 1.5 3.8 3.5 0 2.6-1.2 4.9-2.9 4.9-1 0-1.7-.8-1.4-1.8.3-1.1.8-2.4.8-3.2 0-.7-.4-1.4-1.2-1.4-1 0-1.8 1-1.8 2.4 0 .9.3 1.5.3 1.5l-1.2 5.1c-.3 1.3-.1 3 0 3.6 0 .1.2.2.3.1.1-.1 1.2-1.5 1.6-2.9l.6-2.4c.3.6 1.2 1.1 2.2 1.1 2.9 0 4.8-2.6 4.8-6.1 0-2.7-2.3-5.2-5.7-5.2z"
+        fill="#fff"
+      />
+    </svg>
+  );
+}
+
+function GoogleBusinessIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-label="Google Business Profile">
+      <rect width="24" height="24" rx="4.5" fill="#4285F4" />
+      <path d="M5 8.2 6.4 4.8h11.2L19 8.2v1.1a2.2 2.2 0 0 1-4.4.1 2.2 2.2 0 0 1-4.4 0 2.2 2.2 0 0 1-4.4 0 2.2 2.2 0 0 1-.8.4z" fill="#fff" />
+      <path d="M6.2 12h11.6v7.4H6.2z" fill="#fff" opacity=".9" />
+      <path d="M13.4 14.6h2.8v4.8h-2.8z" fill="#4285F4" />
+    </svg>
+  );
+}
+
 /** Flat platform logo. */
 export function PlatformIcon({ platform }: { platform: Platform }) {
   switch (platform) {
@@ -61,6 +104,12 @@ export function PlatformIcon({ platform }: { platform: Platform }) {
       return <TikTokIcon />;
     case "youtube":
       return <YouTubeIcon />;
+    case "linkedin":
+      return <LinkedInIcon />;
+    case "pinterest":
+      return <PinterestIcon />;
+    case "gmb":
+      return <GoogleBusinessIcon />;
   }
 }
 

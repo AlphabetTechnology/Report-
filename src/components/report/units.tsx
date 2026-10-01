@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element -- report pages are printed, plain <img> keeps them exact */
-import type { ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { eraseChangeLabels } from "@/lib/split";
 import {
   PLATFORM_LABEL,
   SECTIONS,
@@ -56,11 +57,34 @@ function limitsFor(shot: Shot) {
   return { maxW: 118, maxH: 70 };
 }
 
+/** Whether to erase Meta's red/green change labels from screenshots. */
+export const HideChangesContext = createContext(true);
+
+const cleaned = new Map<string, Promise<string>>();
+
+/** The screenshot with change labels erased (computed once per image). */
+function useCleanImage(shot: Shot): string {
+  const hide = useContext(HideChangesContext);
+  const key = `${shot.id}:${shot.dataUrl.length}`;
+  const [clean, setClean] = useState<{ key: string; url: string } | null>(null);
+  useEffect(() => {
+    if (!hide || !shot.dataUrl) return;
+    let alive = true;
+    if (!cleaned.has(key)) cleaned.set(key, eraseChangeLabels(shot.dataUrl).catch(() => shot.dataUrl));
+    cleaned.get(key)!.then((url) => alive && setClean({ key, url }));
+    return () => {
+      alive = false;
+    };
+  }, [hide, key, shot.dataUrl]);
+  return hide && clean?.key === key ? clean.url : shot.dataUrl;
+}
+
 function ShotImg({ shot, w, h }: { shot: Shot; w: number; h: number }) {
+  const src = useCleanImage(shot);
   return (
     <img
       className="rpt-shot"
-      src={shot.dataUrl}
+      src={src}
       alt={shot.fileName}
       style={{ width: `${w}mm`, height: `${h}mm` }}
     />
@@ -78,9 +102,12 @@ function Card({
   badge3d: boolean;
   badge?: boolean;
 }) {
+  const n = shots.length;
+  const portrait = shots.every((s) => s.width / s.height < 0.85);
+  const colW = (172 - (n - 1) * 2.4) / Math.max(n, 1);
   const sized =
-    shots.length === 2
-      ? shots.map((s) => ({ s, ...fit(s, 84, 74) }))
+    n > 1
+      ? shots.map((s) => ({ s, ...fit(s, colW, portrait ? 100 : n === 2 ? 74 : 60) }))
       : shots.map((s) => ({ s, ...fit(s, limitsFor(s).maxW, limitsFor(s).maxH) }));
   const showBadge = badge && platform;
   return (
@@ -167,15 +194,20 @@ function shotUnits(
   const units: Unit[] = [];
   const grids = shots.filter((s) => s.kind === "profile_grid");
   const rest = shots.filter((s) => s.kind !== "profile_grid");
-  // Two small charts for the same platform sit side by side, as in the template.
-  const pairable =
-    rest.length === 2 && rest.every((s) => !WIDE_KINDS.has(s.kind) && s.kind !== "content_overview");
-  if (pairable) {
-    units.push({
-      key: `${keyBase}-pair`,
-      shrinkable: true,
-      node: <Card shots={rest} platform={platform} badge3d={badge3d} badge={badge} />,
-    });
+  // Several small screenshots for the same platform go in rows (2 across, or 3
+  // across for phone screenshots), so 2, 3 or 10 uploads all lay out neatly.
+  const galleryable = rest.length >= 2 && rest.every((s) => !WIDE_KINDS.has(s.kind) && s.kind !== "content_overview");
+  if (galleryable) {
+    const portrait = rest.filter((s) => s.width / s.height < 0.85).length > rest.length / 2;
+    const perRow = portrait ? 3 : 2;
+    for (let i = 0; i < rest.length; i += perRow) {
+      const row = rest.slice(i, i + perRow);
+      units.push({
+        key: `${keyBase}-row${i}`,
+        shrinkable: true,
+        node: <Card shots={row} platform={platform} badge3d={badge3d} badge={badge && i === 0} />,
+      });
+    }
   } else {
     for (const s of rest) {
       units.push({
@@ -256,6 +288,7 @@ const BADGE_3D: Record<ShotSection, boolean> = {
   visits: true,
   audience: true,
   top_content: false,
+  activities: false,
 };
 
 function shotsFor(report: Report, section: ShotSection, platform: Platform | null) {
@@ -468,6 +501,45 @@ function buildFocus(report: Report): Unit[] {
   }));
 }
 
+function buildActivities(report: Report): Unit[] {
+  const a = report.text?.activities;
+  const units: Unit[] = [];
+  const hasShots = report.shots.some((s) => s.section === "activities" && !s.hidden);
+  if (!hasShots && !a?.summary && !a?.items.length) return units;
+  units.push({
+    key: "act-intro",
+    keepWithNext: hasShots,
+    node:
+      a && (a.summary || a.items.length) ? (
+        <>
+          {a.summary && <Rich text={a.summary} />}
+          {a.items.length > 0 && (
+            <ul className="rpt-activity-list">
+              {a.items.map((it, i) => (
+                <li key={i}>{inline(it)}</li>
+              ))}
+            </ul>
+          )}
+        </>
+      ) : (
+        <Placeholder />
+      ),
+  });
+  for (const p of [...orderedPlatforms(report), null]) {
+    const shots = shotsFor(report, "activities", p);
+    if (!shots.length) continue;
+    if (p && orderedPlatforms(report).length > 1) {
+      units.push({
+        key: `act-${p}-title`,
+        keepWithNext: true,
+        node: <h2 className="rpt-platform-title" style={{ marginTop: "3mm" }}>{PLATFORM_LABEL[p]}</h2>,
+      });
+    }
+    units.push(...shotUnits(`act-${p}`, shots, p, false, null));
+  }
+  return units;
+}
+
 function buildConclusion(report: Report): Unit[] {
   const t = report.text?.conclusion;
   return [{ key: "conclusion", node: t ? <Rich text={t} /> : <Placeholder /> }];
@@ -493,6 +565,9 @@ export function buildSections(report: Report, period = ""): BuiltSection[] {
         break;
       case "top_content":
         units = buildTopContent(report);
+        break;
+      case "activities":
+        units = buildActivities(report);
         break;
       case "focus":
         units = buildFocus(report);

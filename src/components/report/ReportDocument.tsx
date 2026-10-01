@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { formatMonth, formatPeriod, formatPlatforms, pad2 } from "@/lib/format";
 import { SECTIONS, type Client, type Report } from "@/lib/types";
 import { Footer, Star, WaveTop } from "./icons";
-import { buildSections, type BuiltSection, type Unit } from "./units";
+import { buildSections, HideChangesContext, type BuiltSection, type Unit } from "./units";
 import "./report.css";
 import { asset } from "@/lib/asset";
 
@@ -63,8 +63,20 @@ function paginate(sections: BuiltSection[], heights: Record<string, number>): Co
   return pages;
 }
 
+const TOC_PHOTO: Record<string, number> = {
+  executive: 1,
+  reach: 2,
+  views: 3,
+  engagement: 4,
+  visits: 5,
+  audience: 6,
+  top_content: 7,
+  activities: 5,
+  focus: 8,
+  conclusion: 9,
+};
 const TOC_IMAGE: Record<string, string> = Object.fromEntries(
-  SECTIONS.map((s, i) => [s.key, asset(`/template/toc/${i + 1}.jpg`)]),
+  SECTIONS.map((s) => [s.key, asset(`/template/toc/${TOC_PHOTO[s.key] ?? 1}.jpg`)]),
 );
 const TOC_COLOURS = ["c-blue", "c-orange", "c-sky"];
 
@@ -121,7 +133,8 @@ function Cover({ report, client }: { report: Report; client: Client | undefined 
 }
 
 function Contents({ sections, firstPage }: { sections: BuiltSection[]; firstPage: Record<string, number> }) {
-  const rowHeight = sections.length > 9 ? 23 : 26;
+  // Up to 10 sections must fit between the title and the footer (about 220mm).
+  const rowHeight = Math.min(26, 220 / Math.max(sections.length, 1));
   return (
     <section className="rpt-page">
       <div className="rpt-toc-bars">
@@ -231,6 +244,7 @@ export default function ReportDocument({
   }, [total, onPageCount]);
 
   return (
+    <HideChangesContext.Provider value={report.hideChanges !== false}>
     <div className="rpt">
       {mounted &&
         createPortal(
@@ -264,5 +278,6 @@ export default function ReportDocument({
       ))}
       <ThankYou />
     </div>
+    </HideChangesContext.Provider>
   );
 }

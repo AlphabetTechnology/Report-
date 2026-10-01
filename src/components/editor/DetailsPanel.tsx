@@ -61,6 +61,22 @@ export default function DetailsPanel({
         </span>
       </div>
 
+      <h3>Screenshots</h3>
+      <label className={`check${report.hideChanges !== false ? " on" : ""}`} style={{ width: "100%" }}>
+        <input
+          type="checkbox"
+          hidden
+          checked={report.hideChanges !== false}
+          onChange={() => set({ hideChanges: report.hideChanges === false })}
+        />
+        <div>
+          <div>Hide Meta&apos;s change percentages</div>
+          <div className="small muted">
+            Removes the red/green “↓ 99.7%” comparison labels from screenshots in the report.
+          </div>
+        </div>
+      </label>
+
       <h3>Platforms on the cover</h3>
       <div className="row wrap">
         {PLATFORMS.map((p) => {

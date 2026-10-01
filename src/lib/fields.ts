@@ -31,6 +31,12 @@ export function listFields(t: ReportText): TextField[] {
     });
     f.push({ id: `topContent.${i}.summary`, label: where, text: c.summary });
   });
+  if (t.activities) {
+    f.push({ id: "activities.summary", label: "Activities & Engagement", text: t.activities.summary });
+    t.activities.items.forEach((it, i) =>
+      f.push({ id: `activities.items.${i}`, label: `Activities & Engagement (point ${i + 1})`, text: it }),
+    );
+  }
   t.focus.forEach((x, i) => {
     f.push({ id: `focus.${i}.title`, label: `Focus ${i + 1} – title`, text: x.title });
     f.push({ id: `focus.${i}.situation`, label: `Focus ${i + 1} – current situation`, text: x.situation });

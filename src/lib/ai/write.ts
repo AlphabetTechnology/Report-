@@ -31,6 +31,7 @@ const WriteSchema = z.object({
       locationsText: z.string(),
     }),
   ),
+  activities: z.object({ summary: z.string(), items: z.array(z.string()) }),
   topContent: z.array(
     z.object({
       platform,
@@ -88,7 +89,10 @@ What to produce:
 - audience: one entry per platform with demographic or location data. metrics such as Lifetime Followers; gender as given; text one or two sentences on age and gender (mention the strongest age range); locations = the top 5 cities, countries = the top 5 countries, exactly as given; locationsText one or two sentences on where the audience is.
 - topContent: one entry per platform with top posts. items: up to 5 posts, title in Title Case, quoted when it is a caption (e.g. "Communication Starts Before First Words") or a descriptive name for festival/occasion posts (e.g. Ganesh Chaturthi Content); detail like "193 views and 5 likes." summary: one sentence on the themes that worked, with the key themes in **bold**.
 - focus: 5 or 6 recommendations for next month, grounded in the data. title: 2–5 words, Title Case, starting with a verb (e.g. "Expand Parent Education"). situation: one sentence on what the data shows. implementation: one sentence starting with "We will".
+- activities: work the agency did this month, from screenshots of kind "activity" (posts published, replies to comments and messages, review replies, Google Business posts, community engagement). summary: one or two sentences in the "we" voice. items: 3–8 short bullet points, each one specific with a count where the data has one (e.g. "Published 12 posts and 4 stories on Instagram", "Replied to every review on Google within 24 hours"). If there are no activity screenshots, return an empty summary and no items.
 - conclusion: two short paragraphs separated by a blank line.
+
+Platform-specific labels: LinkedIn — Impressions, Unique Visitors, Page Views, Reactions, Comments, Reposts, New Followers; Pinterest — Impressions, Engagements, Saves, Outbound Clicks, Monthly Views; Google Business Profile — Profile Views, Searches, Calls, Website Clicks, Directions Requests (call it "Google Business Profile", not GMB).
 
 Use the client's name naturally. Keep platform names capitalised correctly (Facebook, Instagram, TikTok, YouTube, Reels, Shorts).
 

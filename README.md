@@ -2,7 +2,7 @@
 
 Builds SWS social media performance reports from screenshots. Upload the month's analytics screenshots, and the tool:
 
-1. **Reads each screenshot with Claude.** It works out the platform (Facebook, Instagram, TikTok, YouTube) and what the screenshot shows, copies out the numbers, and places it in the right section.
+1. **Reads each screenshot with Claude.** It works out the platform (Facebook, Instagram, TikTok, YouTube, LinkedIn, Pinterest, Google Business Profile) and what the screenshot shows, copies out the numbers, and places it in the right section. Dashboard screenshots with several cards are cut into one image per card, and Meta's red/green "↓ 99.7%" change labels are erased (switch in Details).
 2. **Writes the report text** (executive summary, a paragraph per metric, audience, top content, focus for next month and conclusion) in the SWS house style, in UK or US English per client.
 3. **Proofreads** grammar, spelling, wording, consistent labels, and checks that the numbers in the text match the screenshots. Each change is a suggestion you accept or dismiss.
 4. **Lays everything out** in the SWS A4 template (cover, table of contents, numbered sections, thank-you page). Pages flow automatically, and **Download PDF** saves it.
@@ -28,10 +28,11 @@ Clients and reports are stored in the browser (IndexedDB). Use **Export backup**
 | 4. Engagement | Content interactions, likes, comments, shares |
 | 5. Account Visits | Page / profile visits, follows, subscribers |
 | 6. Audience Overview | Age & gender, top cities & countries |
-| 7. Top Content | Top posts / videos |
-| 8. Focus for the Next Month, 9. Conclusion | Text only |
+| 7. Top Content | Top posts / videos / pins |
+| 8. Activities & Engagement | Proof of work: posts published, comment and review replies, Google Business posts |
+| 9. Focus for the Next Month, 10. Conclusion | Text only |
 
-Sections with nothing in them are left out, and the contents page renumbers itself.
+Sections with nothing in them are left out, and the contents page renumbers itself. Several screenshots in one section are laid out in rows (2 across, or 3 for phone screenshots), so any number of uploads fits.
 
 ## Live site (GitHub Pages)
 
