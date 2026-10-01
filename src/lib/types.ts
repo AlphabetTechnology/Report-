@@ -193,6 +193,8 @@ export interface Report {
   shots: Shot[];
   text: ReportText | null;
   suggestions: Suggestion[];
+  /** When the last proofread ran (cleared when the text is rewritten). */
+  proofreadAt?: number;
   createdAt: number;
   updatedAt: number;
 }

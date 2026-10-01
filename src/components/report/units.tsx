@@ -9,7 +9,7 @@ import {
   type Shot,
   type ShotSection,
 } from "@/lib/types";
-import { Badge, PLATFORM_BAR, PlatformIcon } from "./icons";
+import { Badge, PLATFORM_BAR, PLATFORM_RING, PlatformIcon } from "./icons";
 
 export interface Unit {
   key: string;
@@ -122,22 +122,64 @@ function Card({
   );
 }
 
-function Phone({ shot, platform, caption }: { shot: Shot; platform: Platform | null; caption: string }) {
-  const { w, h } = fit(shot, 76, 150);
+function Phone({
+  shot,
+  platform,
+  stat,
+  period,
+}: {
+  shot: Shot;
+  platform: Platform | null;
+  stat: { label: string; value: string } | null;
+  period: string;
+}) {
+  const { w, h } = fit(shot, 74, 150);
   return (
     <div className="rpt-phone-unit">
-      <div className="rpt-phone-rings" />
-      {platform && (
-        <div className="rpt-phone-icon">
-          <PlatformIcon platform={platform} />
+      <div className="rpt-phone-glow" />
+      <div className="rpt-phone-ring" style={{ width: "118mm", height: "118mm" }} />
+      <div className="rpt-phone-ring" style={{ width: "158mm", height: "158mm" }} />
+      <div className="rpt-phone-accent" style={{ right: "18mm", bottom: "8mm" }} />
+      <div className="rpt-phone-accent" style={{ left: "22mm", top: "6mm", opacity: 0.6 }} />
+      <div className="rpt-phone-dots" style={{ right: "6mm", top: "14mm" }} />
+      <div className="rpt-phone-dots" style={{ left: "8mm", bottom: "18mm" }} />
+      <div className="rpt-phone-stage">
+        <div className="rpt-phone-shadow" />
+        <div className="rpt-iphone">
+          <i className="l1" />
+          <i className="l2" />
+          <i className="l3" />
+          <i className="r1" />
+          <div className="rpt-iphone-bezel">
+            <img src={shot.dataUrl} alt={shot.fileName} style={{ width: `${w}mm`, height: `${h}mm` }} />
+          </div>
         </div>
-      )}
-      <div className="rpt-phone">
-        <img src={shot.dataUrl} alt={shot.fileName} style={{ width: `${w}mm`, height: `${h}mm` }} />
+        {platform && (
+          <div className="rpt-phone-badge" style={{ borderColor: PLATFORM_RING[platform] }}>
+            <PlatformIcon platform={platform} />
+          </div>
+        )}
+        {platform && stat && (
+          <div className="rpt-stat-card">
+            <div className="lbl">
+              <span>
+                <PlatformIcon platform={platform} />
+              </span>
+              {PLATFORM_LABEL[platform]} {stat.label}
+            </div>
+            <div className="val">{stat.value}</div>
+            <div className="bar" />
+            {period && <div className="sub">{period}</div>}
+          </div>
+        )}
       </div>
-      {caption && <div className="rpt-phone-caption">{caption}</div>}
     </div>
   );
+}
+
+interface PhoneInfo {
+  stat: { label: string; value: string } | null;
+  period: string;
 }
 
 /** Turns the screenshots of one platform in one section into units. */
@@ -146,7 +188,7 @@ function shotUnits(
   shots: Shot[],
   platform: Platform | null,
   badge3d: boolean,
-  phoneCaption: string,
+  phone: PhoneInfo | null,
   badge = true,
 ): Unit[] {
   const units: Unit[] = [];
@@ -173,7 +215,7 @@ function shotUnits(
   for (const s of grids) {
     units.push({
       key: `${keyBase}-${s.id}`,
-      node: <Phone shot={s} platform={platform} caption={phoneCaption} />,
+      node: <Phone shot={s} platform={platform} stat={phone?.stat ?? null} period={phone?.period ?? ""} />,
     });
   }
   return units;
@@ -225,19 +267,24 @@ function buildExecutive(report: Report): Unit[] {
     { key: "exec-text", node: text ? <Rich text={text} /> : <Placeholder /> },
   ];
   for (const p of [...orderedPlatforms(report), null]) {
-    units.push(...shotUnits(`exec-${p}`, shotsFor(report, "executive", p), p, true, ""));
+    units.push(...shotUnits(`exec-${p}`, shotsFor(report, "executive", p), p, true, null));
   }
   return units;
 }
 
-function buildMetricSection(report: Report, section: "reach" | "views" | "engagement" | "visits"): Unit[] {
+function buildMetricSection(
+  report: Report,
+  section: "reach" | "views" | "engagement" | "visits",
+  period: string,
+): Unit[] {
   const units: Unit[] = [];
   for (const p of orderedPlatforms(report)) {
     const block = report.text?.blocks.find((b) => b.section === section && b.platform === p);
     const shots = shotsFor(report, section, p);
     if (!block && !shots.length) continue;
     const viewsMetric = block?.metrics.find((m) => /views/i.test(m.label) && !/second/i.test(m.label));
-    const caption = viewsMetric ? `${PLATFORM_LABEL[p]} Views: ${viewsMetric.value}` : "";
+    const firstMetric = viewsMetric ?? block?.metrics[0];
+    const phone: PhoneInfo = { stat: firstMetric ?? null, period };
     units.push({
       key: `${section}-${p}-intro`,
       keepWithNext: shots.length > 0,
@@ -255,9 +302,9 @@ function buildMetricSection(report: Report, section: "reach" | "views" | "engage
         </>
       ),
     });
-    units.push(...shotUnits(`${section}-${p}`, shots, p, BADGE_3D[section], caption));
+    units.push(...shotUnits(`${section}-${p}`, shots, p, BADGE_3D[section], phone));
   }
-  units.push(...shotUnits(`${section}-none`, shotsFor(report, section, null), null, false, ""));
+  units.push(...shotUnits(`${section}-none`, shotsFor(report, section, null), null, false, null));
   return units;
 }
 
@@ -303,7 +350,7 @@ function buildAudience(report: Report): Unit[] {
         <Placeholder />
       ),
     });
-    units.push(...shotUnits(`aud-${p}-demo`, demo, p, true, "", false));
+    units.push(...shotUnits(`aud-${p}-demo`, demo, p, true, null, false));
 
     if (a && (a.locations.length || a.countries.length)) {
       if (a.locations.length) {
@@ -352,9 +399,9 @@ function buildAudience(report: Report): Unit[] {
         ),
       });
     }
-    units.push(...shotUnits(`aud-${p}-locshots`, loc, p, true, "", false));
+    units.push(...shotUnits(`aud-${p}-locshots`, loc, p, true, null, false));
   }
-  units.push(...shotUnits(`aud-none`, shotsFor(report, "audience", null), null, false, "", false));
+  units.push(...shotUnits(`aud-none`, shotsFor(report, "audience", null), null, false, null, false));
   return units;
 }
 
@@ -389,9 +436,9 @@ function buildTopContent(report: Report): Unit[] {
         </>
       ),
     });
-    units.push(...shotUnits(`top-${p}`, shots, p, false, ""));
+    units.push(...shotUnits(`top-${p}`, shots, p, false, null));
   }
-  units.push(...shotUnits(`top-none`, shotsFor(report, "top_content", null), null, false, ""));
+  units.push(...shotUnits(`top-none`, shotsFor(report, "top_content", null), null, false, null));
   return units;
 }
 
@@ -424,7 +471,7 @@ function buildConclusion(report: Report): Unit[] {
 }
 
 /** All sections that have something to show, numbered in order. */
-export function buildSections(report: Report): BuiltSection[] {
+export function buildSections(report: Report, period = ""): BuiltSection[] {
   const out: BuiltSection[] = [];
   for (const s of SECTIONS) {
     let units: Unit[];
@@ -436,7 +483,7 @@ export function buildSections(report: Report): BuiltSection[] {
       case "views":
       case "engagement":
       case "visits":
-        units = buildMetricSection(report, s.key);
+        units = buildMetricSection(report, s.key, period);
         break;
       case "audience":
         units = buildAudience(report);

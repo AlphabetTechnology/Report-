@@ -46,8 +46,27 @@ export async function prepareImage(
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, width, height);
   }
+  ctx.imageSmoothingQuality = "high";
   ctx.drawImage(img, 0, 0, width, height);
   return { dataUrl: canvas.toDataURL(mime, 0.92), width, height };
+}
+
+/** Lossless, high-resolution copy for printing (text in screenshots stays crisp). */
+export const prepareScreenshot = (file: Blob) => prepareImage(file, 2800, "image/png");
+
+/** Smaller JPEG sent to Claude for reading (Claude works at about 1568px anyway). */
+export async function imageForApi(dataUrl: string): Promise<string> {
+  const img = await loadImage(dataUrl);
+  const scale = Math.min(1, 1568 / Math.max(img.width, img.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.9);
 }
 
 /**

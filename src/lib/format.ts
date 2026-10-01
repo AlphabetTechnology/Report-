@@ -1,4 +1,4 @@
-import { PLATFORM_LABEL, type Platform } from "./types";
+import { PLATFORM_LABEL, type EnglishVariant, type Platform } from "./types";
 
 const MONTHS = [
   "January",
@@ -20,13 +20,32 @@ const parse = (iso: string) => {
   return { y, m, d };
 };
 
-/** "1 September – 30 September 2026" */
-export function formatPeriod(start: string, end: string): string {
+export const MONTH_NAMES = MONTHS;
+
+/** UK "1 September 2026", US "September 1, 2026" */
+export function formatDate(iso: string, english: EnglishVariant): string {
+  if (!iso) return "";
+  const { y, m, d } = parse(iso);
+  return english === "en-US" ? `${MONTHS[m - 1]} ${d}, ${y}` : `${d} ${MONTHS[m - 1]} ${y}`;
+}
+
+/** UK "01/10/2026", US "10/01/2026" */
+export function formatShortDate(iso: string, english: EnglishVariant): string {
+  if (!iso) return "";
+  const { y, m, d } = parse(iso);
+  return english === "en-US" ? `${pad2(m)}/${pad2(d)}/${y}` : `${pad2(d)}/${pad2(m)}/${y}`;
+}
+
+/** UK "1 September – 30 September 2026", US "September 1 – September 30, 2026" */
+export function formatPeriod(start: string, end: string, english: EnglishVariant): string {
   if (!start || !end) return "";
   const s = parse(start);
   const e = parse(end);
-  const sYear = s.y === e.y ? "" : ` ${s.y}`;
-  return `${s.d} ${MONTHS[s.m - 1]}${sYear} – ${e.d} ${MONTHS[e.m - 1]} ${e.y}`;
+  const sameYear = s.y === e.y;
+  if (english === "en-US") {
+    return `${MONTHS[s.m - 1]} ${s.d}${sameYear ? "" : `, ${s.y}`} – ${MONTHS[e.m - 1]} ${e.d}, ${e.y}`;
+  }
+  return `${s.d} ${MONTHS[s.m - 1]}${sameYear ? "" : ` ${s.y}`} – ${e.d} ${MONTHS[e.m - 1]} ${e.y}`;
 }
 
 /** "September 2026" */

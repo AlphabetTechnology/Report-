@@ -103,7 +103,7 @@ function Cover({ report, client }: { report: Report; client: Client | undefined 
         </div>
         <div>
           <b>Reporting Period:</b>
-          {formatPeriod(report.periodStart, report.periodEnd)}
+          {formatPeriod(report.periodStart, report.periodEnd, client?.english ?? "en-GB")}
         </div>
         <div>
           <b>Prepared:</b>
@@ -176,7 +176,11 @@ export default function ReportDocument({
   client: Client | undefined;
   onPageCount?: (n: number) => void;
 }) {
-  const sections = useMemo(() => buildSections(report), [report]);
+  const english = client?.english ?? "en-GB";
+  const sections = useMemo(
+    () => buildSections(report, formatPeriod(report.periodStart, report.periodEnd, english)),
+    [report, english],
+  );
   const measureRef = useRef<HTMLDivElement>(null);
   const [heights, setHeights] = useState<Record<string, number> | null>(null);
   const [mounted, setMounted] = useState(false);

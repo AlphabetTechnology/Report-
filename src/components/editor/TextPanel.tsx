@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Icon from "@/components/Icon";
 import { postJson } from "@/lib/api";
 import { formatMonth, formatPeriod, monthName } from "@/lib/format";
 import { setAt } from "@/lib/fields";
@@ -88,7 +89,7 @@ export default function TextPanel({
           description: client?.description ?? "",
           english: client?.english ?? "en-GB",
         },
-        period: formatPeriod(report.periodStart, report.periodEnd),
+        period: formatPeriod(report.periodStart, report.periodEnd, client?.english ?? "en-GB"),
         month: `${monthName(report.periodStart)} (${formatMonth(report.periodStart)})`,
         platforms: report.platforms.map((p) => PLATFORM_LABEL[p]),
         shots: readable.map((s) => ({
@@ -98,7 +99,7 @@ export default function TextPanel({
           extraction: s.extraction,
         })),
       });
-      update((r) => ({ ...r, text, suggestions: [] }));
+      update((r) => ({ ...r, text, suggestions: [], proofreadAt: undefined }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not write the text");
     } finally {
@@ -108,13 +109,18 @@ export default function TextPanel({
 
   return (
     <div>
-      <div className="notice">
-        Claude writes every paragraph from the numbers in your screenshots, in{" "}
-        {client?.english === "en-US" ? "US" : "UK"} English and the SWS house style. You can edit anything below; the
-        preview updates as you type.
-      </div>
-      <div className="row" style={{ marginBottom: 16 }}>
-        <button className="btn accent" disabled={busy || reading || !readable.length} onClick={generate}>
+      <div className="ai-card">
+        <h4>
+          <Icon name="sparkles" size={17} />
+          {t ? "Report text is ready to edit" : "Let Claude write the report"}
+        </h4>
+        <p>
+          Every paragraph is written from the numbers in your screenshots, in{" "}
+          {client?.english === "en-US" ? "US" : "UK"} English and the SWS house style. Edit anything below; the preview
+          updates as you type.
+        </p>
+        <div className="row">
+        <button className={`btn ${t ? "glass" : "accent"}`} disabled={busy || reading || !readable.length} onClick={generate}>
           {busy ? (
             <>
               <span className="spinner" /> Writing… (about a minute)
@@ -125,8 +131,9 @@ export default function TextPanel({
             "Write report text with Claude"
           )}
         </button>
-        {!readable.length && <span className="small muted">Add screenshots first.</span>}
-        {reading && <span className="small muted">Waiting for screenshots to be read…</span>}
+        {!readable.length && <span className="small" style={{ color: "#d6e4f3" }}>Add screenshots first.</span>}
+        {reading && <span className="small" style={{ color: "#d6e4f3" }}>Waiting for screenshots…</span>}
+        </div>
       </div>
       {error && <div className="notice err">{error}</div>}
 

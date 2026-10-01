@@ -2,8 +2,9 @@
 /* eslint-disable @next/next/no-img-element -- local data URLs */
 
 import { useState } from "react";
+import Icon from "@/components/Icon";
 import { postJson, runPool } from "@/lib/api";
-import { prepareImage } from "@/lib/image";
+import { imageForApi, prepareScreenshot } from "@/lib/image";
 import { newId } from "@/lib/store";
 import {
   KIND_SECTION,
@@ -45,7 +46,10 @@ export default function ShotsPanel({
   async function analyse(shot: Shot) {
     patchShot(shot.id, { status: "analysing", error: undefined });
     try {
-      const a = await postJson<Analysis>("/api/analyze", { dataUrl: shot.dataUrl, fileName: shot.fileName });
+      const a = await postJson<Analysis>("/api/analyze", {
+        dataUrl: await imageForApi(shot.dataUrl),
+        fileName: shot.fileName,
+      });
       const platform = a.platform === "unknown" ? null : a.platform;
       update((r) => {
         const platforms =
@@ -92,7 +96,7 @@ export default function ShotsPanel({
       const base = report.shots.length;
       const shots: Shot[] = [];
       for (const [i, f] of images.entries()) {
-        const img = await prepareImage(f);
+        const img = await prepareScreenshot(f);
         shots.push({
           id: newId(),
           dataUrl: img.dataUrl,
@@ -142,7 +146,6 @@ export default function ShotsPanel({
     >
       <label
         className={`dropzone${over ? " over" : ""}`}
-        style={{ display: "block" }}
         onDragOver={(e) => {
           e.preventDefault();
           setOver(true);
@@ -154,6 +157,9 @@ export default function ShotsPanel({
           addFiles(Array.from(e.dataTransfer.files));
         }}
       >
+        <div className="ic">
+          <Icon name="upload" size={24} />
+        </div>
         <strong>Drop screenshots here</strong>
         <span className="small muted">
           or click to choose, or paste (Ctrl/Cmd+V). Add them all at once: Facebook, Instagram, TikTok and YouTube.
@@ -259,21 +265,21 @@ export default function ShotsPanel({
                       ))}
                     </select>
                     <div className="row" style={{ gap: 2 }}>
-                      <button className="btn small ghost" title="Move up" onClick={() => move(s, -1)}>
-                        ↑
+                      <button className="btn small ghost icon" title="Move up" onClick={() => move(s, -1)}>
+                        <Icon name="up" size={15} />
                       </button>
-                      <button className="btn small ghost" title="Move down" onClick={() => move(s, 1)}>
-                        ↓
+                      <button className="btn small ghost icon" title="Move down" onClick={() => move(s, 1)}>
+                        <Icon name="down" size={15} />
                       </button>
-                      <button className="btn small ghost" title="Read again" onClick={() => analyse(s)}>
-                        ↻
+                      <button className="btn small ghost icon" title="Read again" onClick={() => analyse(s)}>
+                        <Icon name="refresh" size={14} />
                       </button>
                       <button
-                        className="btn small ghost danger"
+                        className="btn small ghost icon danger"
                         title="Remove"
                         onClick={() => update((r) => ({ ...r, shots: r.shots.filter((x) => x.id !== s.id) }))}
                       >
-                        ✕
+                        <Icon name="trash" size={14} />
                       </button>
                     </div>
                   </div>

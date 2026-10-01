@@ -35,6 +35,7 @@ Check every field for:
 - spelling: typos and spellings that do not match ${english === "en-GB" ? "British" : "American"} English
 - style: awkward, repetitive or unclear wording, wrong capitalisation of platform names (Facebook, Instagram, TikTok, YouTube, Reels), inconsistent dashes (use – for ranges, — between a post and its stats)
 - consistency: the same metric labelled differently across the report, or the client's name spelled differently (correct name: "${clientName}")
+- dates: written the ${english === "en-GB" ? "UK way (14 September 2026, 1 – 30 September)" : "US way (September 14, 2026, September 1 – 30)"}
 - number: a number in the text that does not match the screenshot data provided
 
 Rules:

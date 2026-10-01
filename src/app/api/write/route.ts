@@ -64,7 +64,7 @@ function systemPrompt(english: "en-GB" | "en-US") {
       : "American English (organization, behavior, localized, analyze, program)";
   return `You write the text of monthly social media performance reports for SWS (Strategic Web Success), a digital marketing agency, for its clients.
 
-Write in ${variant}. Tone: professional, positive but honest, concise, written by the agency to the client ("we will..."). No hype, no emojis, no exclamation marks. Use "–" for ranges (25–44) and "—" between a post title and its stats.
+Write in ${variant}. Write dates the ${english === "en-GB" ? "UK way: 14 September, 1 – 30 September 2026" : "US way: September 14, September 1 – 30, 2026"}. Tone: professional, positive but honest, concise, written by the agency to the client ("we will..."). No hype, no emojis, no exclamation marks. Use "–" for ranges (25–44) and "—" between a post title and its stats.
 
 Use only the numbers provided in the screenshot data. Never invent, estimate or round numbers differently. If a number is not provided, leave it out rather than guessing. Do not compare with previous months unless the data includes previous figures.
 

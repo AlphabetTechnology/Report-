@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import ClientForm, { ClientLogo } from "@/components/ClientForm";
+import DateField from "@/components/DateField";
+import { formatDate, formatPeriod } from "@/lib/format";
 import { PLATFORM_LABEL, PLATFORMS, type Client, type Report } from "@/lib/types";
 
 export default function DetailsPanel({
@@ -19,6 +21,7 @@ export default function DetailsPanel({
 }) {
   const [editing, setEditing] = useState(false);
   const set = (patch: Partial<Report>) => update((r) => ({ ...r, ...patch }));
+  const english = client?.english ?? "en-GB";
 
   return (
     <div>
@@ -41,20 +44,22 @@ export default function DetailsPanel({
       </p>
 
       <h3>Reporting period</h3>
-      <div className="row">
-        <label className="field" style={{ flex: 1 }}>
-          <span>From</span>
-          <input className="input" type="date" value={report.periodStart} onChange={(e) => set({ periodStart: e.target.value })} />
-        </label>
-        <label className="field" style={{ flex: 1 }}>
-          <span>To</span>
-          <input className="input" type="date" value={report.periodEnd} onChange={(e) => set({ periodEnd: e.target.value })} />
-        </label>
+      <DateField label="From" english={english} value={report.periodStart} onChange={(v) => set({ periodStart: v })} />
+      <DateField label="To" english={english} value={report.periodEnd} onChange={(v) => set({ periodEnd: v })} />
+      <DateField
+        label="Prepared (date the report is sent; the cover shows the month)"
+        english={english}
+        value={report.preparedDate}
+        onChange={(v) => set({ preparedDate: v })}
+      />
+      <div className="notice" style={{ marginTop: -2 }}>
+        Cover will read: <strong>{formatPeriod(report.periodStart, report.periodEnd, english)}</strong>
+        <br />
+        <span className="small">
+          {english === "en-GB" ? "UK" : "US"} date style, from the client settings. Prepared on{" "}
+          {formatDate(report.preparedDate, english)}.
+        </span>
       </div>
-      <label className="field">
-        <span>Prepared (date the report is sent; the cover shows the month)</span>
-        <input className="input" type="date" value={report.preparedDate} onChange={(e) => set({ preparedDate: e.target.value })} />
-      </label>
 
       <h3>Platforms on the cover</h3>
       <div className="row wrap">

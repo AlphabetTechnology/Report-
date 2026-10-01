@@ -8,18 +8,31 @@ import ProofreadPanel from "@/components/editor/ProofreadPanel";
 import ShotsPanel from "@/components/editor/ShotsPanel";
 import TextPanel from "@/components/editor/TextPanel";
 import ReportDocument from "@/components/report/ReportDocument";
-import TopBar from "@/components/TopBar";
-import { formatMonth, monthName } from "@/lib/format";
+import { ClientLogo } from "@/components/ClientForm";
+import Icon, { type IconName } from "@/components/Icon";
+import { formatMonth, formatPeriod, monthName } from "@/lib/format";
+import { reportProgress } from "@/lib/progress";
 import { getReport, listClients, saveReport } from "@/lib/store";
 import type { Client, Report } from "@/lib/types";
 
-const TABS = [
-  { key: "details", label: "Details" },
-  { key: "shots", label: "Screenshots" },
-  { key: "text", label: "Text" },
-  { key: "proof", label: "Proofread" },
-] as const;
+const TABS: { key: "details" | "shots" | "text" | "proof"; label: string; icon: IconName }[] = [
+  { key: "details", label: "Details", icon: "settings" },
+  { key: "shots", label: "Screenshots", icon: "image" },
+  { key: "text", label: "Text", icon: "pen" },
+  { key: "proof", label: "Proofread", icon: "spell" },
+];
 type Tab = (typeof TABS)[number]["key"];
+
+function Bar({ children }: { children?: React.ReactNode }) {
+  return (
+    <header className="topbar no-print">
+      <Link className="btn ghost icon" href="/" title="Back to dashboard">
+        <Icon name="arrowLeft" />
+      </Link>
+      {children}
+    </header>
+  );
+}
 
 const A4_WIDTH_PX = (210 * 96) / 25.4;
 
@@ -31,7 +44,9 @@ export default function ReportEditor() {
   const [tab, setTab] = useState<Tab>("shots");
   const [saved, setSaved] = useState(true);
   const [pageCount, setPageCount] = useState(0);
-  const [zoom, setZoom] = useState(0.8);
+  const [fitZoom, setFitZoom] = useState(0.8);
+  const [zoomOverride, setZoomOverride] = useState<number | null>(null);
+  const zoom = zoomOverride ?? fitZoom;
   const dirty = useRef(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -70,7 +85,7 @@ export default function ReportEditor() {
     const el = previewRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
-      setZoom(Math.min(1, (entry.contentRect.width - 48) / A4_WIDTH_PX));
+      setFitZoom(Math.min(1, (entry.contentRect.width - 48) / A4_WIDTH_PX));
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -87,16 +102,16 @@ export default function ReportEditor() {
   if (missing) {
     return (
       <>
-        <TopBar />
-        <main className="page-wrap">
-          <div className="panel empty-state">
+        <Bar />
+        <main className="main">
+          <div className="empty-state">
             This report is not in this browser. <Link href="/">Back to reports</Link>
           </div>
         </main>
       </>
     );
   }
-  if (!report) return <TopBar />;
+  if (!report) return <Bar />;
 
   const client = clients.find((c) => c.id === report.clientId);
 
@@ -110,32 +125,57 @@ export default function ReportEditor() {
     document.title = original;
   }
 
+  const progress = reportProgress(report);
+  const tabDone: Record<Tab, boolean> = {
+    details: true,
+    shots: progress.shots,
+    text: progress.text,
+    proof: progress.proofread,
+  };
   const unplaced = report.shots.filter((s) => s.status === "done" && !s.platform).length;
 
   return (
     <>
-      <TopBar>
-        <span className="crumb">/</span>
-        <strong>
-          {client?.name} — {formatMonth(report.periodStart)}
-        </strong>
+      <Bar>
+        <div className="who">
+          <ClientLogo client={client} size={38} />
+          <div style={{ minWidth: 0 }}>
+            <strong>
+              {client?.name} · {formatMonth(report.periodStart)}
+            </strong>
+            <small>{formatPeriod(report.periodStart, report.periodEnd, client?.english ?? "en-GB")}</small>
+          </div>
+        </div>
         <div className="spacer" />
-        <span className="small muted">
-          {saved ? "Saved" : "Saving…"} · {pageCount} pages
+        <span className={`chip ${progress.proofread ? "green" : progress.text ? "orange" : "blue"}`}>
+          <span className="dot" />
+          {progress.label}
         </span>
-        <button className="btn primary" onClick={downloadPdf}>
+        <span className={`save-state${saved ? " ok" : ""}`}>
+          {saved ? <Icon name="checkCircle" size={15} /> : <span className="spinner" style={{ width: 12, height: 12 }} />}
+          {saved ? "Saved" : "Saving"} · {pageCount} pages
+        </span>
+        <button className="btn accent" onClick={downloadPdf}>
+          <Icon name="download" size={16} />
           Download PDF
         </button>
-      </TopBar>
+      </Bar>
       <div className="editor">
         <aside className="editor-side no-print">
           <nav className="tabs">
-            {TABS.map((t, i) => (
+            {TABS.map((t) => (
               <button key={t.key} className={`tab${tab === t.key ? " on" : ""}`} onClick={() => setTab(t.key)}>
-                <span className="n">{i + 1}</span>
+                <Icon name={t.icon} size={17} />
                 {t.label}
-                {t.key === "proof" && report.suggestions.length > 0 && (
-                  <span className="chip orange">{report.suggestions.length}</span>
+                {t.key === "proof" && report.suggestions.length > 0 ? (
+                  <span className="badge">{report.suggestions.length}</span>
+                ) : (
+                  t.key !== "details" &&
+                  tabDone[t.key] && (
+                    <span className="done">
+                      <Icon name="check" size={9} stroke={4} />
+                    </span>
+                  )
                 )}
               </button>
             ))}
@@ -163,7 +203,7 @@ export default function ReportEditor() {
             {tab === "text" && <TextPanel report={report} client={client} update={update} />}
             {tab === "proof" && <ProofreadPanel report={report} client={client} update={update} />}
           </div>
-          <div className="no-print" style={{ padding: "10px 18px", borderTop: "1px solid var(--line)" }}>
+          <div className="side-foot">
             <p className="small muted" style={{ margin: 0 }}>
               Download PDF opens the print window: choose <strong>Save as PDF</strong>, paper A4, margins None, and tick{" "}
               <strong>Background graphics</strong>.
@@ -171,6 +211,20 @@ export default function ReportEditor() {
           </div>
         </aside>
         <div className="preview" ref={previewRef}>
+          <div className="zoom-bar no-print">
+            <div>
+              <button className="btn small ghost icon" title="Zoom out" onClick={() => setZoomOverride(Math.max(0.3, zoom - 0.1))}>
+                <Icon name="zoomOut" size={16} />
+              </button>
+              <span>{Math.round(zoom * 100)}%</span>
+              <button className="btn small ghost icon" title="Zoom in" onClick={() => setZoomOverride(Math.min(2, zoom + 0.1))}>
+                <Icon name="zoomIn" size={16} />
+              </button>
+              <button className="btn small ghost" onClick={() => setZoomOverride(null)}>
+                Fit
+              </button>
+            </div>
+          </div>
           <div className="preview-inner" style={{ zoom }}>
             <ReportDocument report={report} client={client} onPageCount={setPageCount} />
           </div>

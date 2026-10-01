@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Icon from "@/components/Icon";
 import { postJson } from "@/lib/api";
 import { getAt, listFields, setAt } from "@/lib/fields";
 import { newId } from "@/lib/store";
@@ -55,6 +56,7 @@ export default function ProofreadPanel({
       });
       update((r) => ({
         ...r,
+        proofreadAt: Date.now(),
         suggestions: suggestions.map((s) => ({
           id: newId(),
           path: s.fieldId,
@@ -96,12 +98,16 @@ export default function ProofreadPanel({
 
   return (
     <div>
-      <div className="notice">
-        Checks grammar, spelling ({english === "en-GB" ? "UK" : "US"} English for {client?.name ?? "this client"}),
-        wording, consistent labels and that numbers in the text match the screenshots. Nothing changes until you accept
-        it.
-      </div>
-      <div className="row" style={{ marginBottom: 16 }}>
+      <div className="ai-card">
+        <h4>
+          <Icon name="spell" size={17} />
+          Proofread for {english === "en-GB" ? "🇬🇧 UK" : "🇺🇸 US"} English
+        </h4>
+        <p>
+          Grammar, spelling, wording, date style and consistent labels, plus a check that every number in the text
+          matches the screenshots. Nothing changes until you accept it.
+        </p>
+      <div className="row">
         <button className="btn accent" disabled={busy} onClick={check}>
           {busy ? (
             <>
@@ -113,26 +119,32 @@ export default function ProofreadPanel({
         </button>
         <div className="spacer" />
         {report.suggestions.length > 1 && (
-          <button className="btn small" onClick={acceptAll}>
+          <button className="btn small glass" onClick={acceptAll}>
+            <Icon name="check" size={14} />
             Accept all ({report.suggestions.length})
           </button>
         )}
       </div>
+      </div>
       {error && <div className="notice err">{error}</div>}
       {checked && !busy && report.suggestions.length === 0 && (
-        <div className="notice">No issues left. The report reads well.</div>
+        <div className="notice" style={{ background: "var(--ok-soft)", color: "#0b6b3e" }}>
+          <Icon name="checkCircle" size={16} />
+          No issues left. The report is ready to send.
+        </div>
       )}
       {report.suggestions.map((s) => (
         <div className="suggestion" key={s.id}>
           <div className="where">
             <span className={`chip ${TYPE_CHIP[s.type]}`}>{s.type}</span> {labelFor.get(s.path) ?? s.path}
           </div>
-          <div>
+          <div className="diff">
             <del>{s.original}</del> → <ins>{s.replacement}</ins>
           </div>
           <div className="reason">{s.reason}</div>
           <div className="row">
             <button className="btn small primary" onClick={() => accept(s)}>
+              <Icon name="check" size={14} />
               Accept
             </button>
             <button className="btn small ghost" onClick={() => dismiss(s)}>
