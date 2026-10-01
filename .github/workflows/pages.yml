@@ -52,7 +52,7 @@ jobs:
             mkdir -p previous
             git archive FETCH_HEAD _next/static | tar -x -C previous 2>/dev/null || true
             if [ -d previous/_next/static ] && [ "$(du -sm previous/_next/static | cut -f1)" -lt 60 ]; then
-              cp -rn previous/_next/static/. out/_next/static/
+              cp -rn previous/_next/static/. out/_next/static/ 2>/dev/null || true
             fi
           fi
 
