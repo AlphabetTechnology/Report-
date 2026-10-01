@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- logos are local data URLs */
 
+import { errorMessage } from "@/lib/errors";
 import { useRef, useState } from "react";
 import Icon from "@/components/Icon";
 import { readWebsite } from "@/lib/api";
@@ -60,7 +61,7 @@ export default function ClientForm({
       setDescription(r.description);
       if (!name.trim() && r.businessName) setName(r.businessName);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not read the website");
+      setError(errorMessage(e, "Could not read the website"));
     } finally {
       setReading(false);
     }

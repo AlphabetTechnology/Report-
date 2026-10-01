@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Icon from "@/components/Icon";
 import { proofread } from "@/lib/api";
@@ -66,7 +67,7 @@ export default function ProofreadPanel({
       }));
       setChecked(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Proofreading failed");
+      setError(errorMessage(e, "Proofreading failed"));
     } finally {
       setBusy(false);
     }

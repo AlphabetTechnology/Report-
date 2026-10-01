@@ -1,10 +1,15 @@
 "use client";
 
-import type { Analysis } from "./ai/analyze";
-import type { ProofreadRequest, RawSuggestion } from "./ai/proofread";
-import type { WebsiteRequest, WebsiteSummary } from "./ai/website";
-import type { WriteRequest } from "./ai/write";
+import Anthropic from "@anthropic-ai/sdk";
+import { analyzeScreenshot, type Analysis } from "./ai/analyze";
+import { MODEL } from "./ai/call";
+import { proofreadReport, type ProofreadRequest, type RawSuggestion } from "./ai/proofread";
+import { describeWebsite, type WebsiteRequest, type WebsiteSummary } from "./ai/website";
+import { writeReport, type WriteRequest } from "./ai/write";
 import type { ReportText } from "./types";
+
+// The AI code is imported up front (not loaded on demand) so a tab that was open
+// during a site update can still use it.
 
 /**
  * Static builds (GitHub Pages) have no server, so Claude is called straight
@@ -57,8 +62,6 @@ export function maskKey(key: string): string {
  * Resolves on success, throws a plain-English error otherwise.
  */
 export async function verifyApiKey(key: string): Promise<void> {
-  const { default: Anthropic } = await import("@anthropic-ai/sdk");
-  const { MODEL } = await import("./ai/call");
   const client = new Anthropic({ apiKey: key.trim(), dangerouslyAllowBrowser: true, maxRetries: 0, timeout: 20_000 });
   try {
     await client.models.retrieve(MODEL);
@@ -81,7 +84,6 @@ async function browserClient() {
     askForKey();
     throw new Error("Connect Claude first: Settings → Integrations → Claude.");
   }
-  const { default: Anthropic } = await import("@anthropic-ai/sdk");
   return new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true, maxRetries: 2 });
 }
 
@@ -117,25 +119,21 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
 
 export async function analyzeShot(dataUrl: string, fileName: string): Promise<Analysis> {
   if (!DIRECT_AI) return postJson("/api/analyze", { dataUrl, fileName });
-  const { analyzeScreenshot } = await import("./ai/analyze");
   return direct(async () => analyzeScreenshot(await browserClient(), dataUrl, fileName));
 }
 
 export async function writeText(body: WriteRequest): Promise<ReportText> {
   if (!DIRECT_AI) return postJson("/api/write", body);
-  const { writeReport } = await import("./ai/write");
   return direct(async () => writeReport(await browserClient(), body));
 }
 
 export async function proofread(body: ProofreadRequest): Promise<{ suggestions: RawSuggestion[] }> {
   if (!DIRECT_AI) return postJson("/api/proofread", body);
-  const { proofreadReport } = await import("./ai/proofread");
   return direct(async () => proofreadReport(await browserClient(), body));
 }
 
 export async function readWebsite(body: WebsiteRequest): Promise<WebsiteSummary> {
   if (!DIRECT_AI) return postJson("/api/website", body);
-  const { describeWebsite } = await import("./ai/website");
   return direct(async () => describeWebsite(await browserClient(), body));
 }
 

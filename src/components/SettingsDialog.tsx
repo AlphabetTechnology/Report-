@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Icon from "@/components/Icon";
 import {
@@ -172,7 +173,7 @@ export default function SettingsDialog() {
       setKey("");
       setKeyOk("Connected. Claude is ready to read screenshots and write reports.");
     } catch (e) {
-      setKeyError(e instanceof Error ? e.message : "Could not check the key");
+      setKeyError(errorMessage(e, "Could not check the key"));
     } finally {
       setChecking(false);
     }
@@ -190,7 +191,7 @@ export default function SettingsDialog() {
       setKeyOk("Connection works.");
     } catch (e) {
       setApiKey(k, 0);
-      setKeyError(e instanceof Error ? e.message : "Could not check the key");
+      setKeyError(errorMessage(e, "Could not check the key"));
     } finally {
       setChecking(false);
     }
@@ -208,7 +209,7 @@ export default function SettingsDialog() {
     try {
       await connectDrive();
     } catch (e) {
-      setDriveError(e instanceof Error ? e.message : "Could not connect to Google Drive");
+      setDriveError(errorMessage(e, "Could not connect to Google Drive"));
     } finally {
       setDriveBusy(false);
     }

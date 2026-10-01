@@ -34,12 +34,27 @@ jobs:
           rm -rf src/app/api src/app/login
           npx next build
           touch out/.nojekyll
+          echo "{\"build\":\"${GITHUB_SHA}\"}" > out/version.json
         env:
           STATIC_EXPORT: "1"
           NEXT_PUBLIC_DIRECT_AI: "1"
           NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
           # Optional default for everyone: Settings → Secrets and variables → Actions → Variables.
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          NEXT_PUBLIC_BUILD_ID: ${{ github.sha }}
+
+      - name: Keep files from the previous version
+        # Tabs opened before this deploy still ask for the old script files;
+        # keeping them avoids "Failed to load chunk" errors. If old files ever
+        # pass 60 MB they are dropped and the next deploy starts fresh.
+        run: |
+          if git fetch --depth=1 origin gh-pages 2>/dev/null; then
+            mkdir -p previous
+            git archive FETCH_HEAD _next/static | tar -x -C previous 2>/dev/null || true
+            if [ -d previous/_next/static ] && [ "$(du -sm previous/_next/static | cut -f1)" -lt 60 ]; then
+              cp -rn previous/_next/static/. out/_next/static/
+            fi
+          fi
 
       - name: Publish to gh-pages branch
         run: |

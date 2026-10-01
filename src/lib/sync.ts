@@ -29,6 +29,7 @@ import {
   type Kind,
 } from "./store";
 import type { Client, Report, Shot } from "./types";
+import { errorMessage } from "@/lib/errors";
 
 /*
  * Two-way sync between this browser and a shared Google Drive folder.
@@ -192,7 +193,7 @@ async function syncOnce() {
     if (changedIds.length) window.dispatchEvent(new CustomEvent(DATA_CHANGED, { detail: { ids: changedIds } }));
   } catch (e) {
     if (e instanceof NeedsAuthError) setStatus({ state: "reconnect" });
-    else setStatus({ state: "error", error: e instanceof Error ? e.message : "Sync failed" });
+    else setStatus({ state: "error", error: errorMessage(e, "Sync failed") });
   }
 }
 

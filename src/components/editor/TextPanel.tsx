@@ -1,5 +1,6 @@
 "use client";
 
+import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Icon from "@/components/Icon";
 import { writeText } from "@/lib/api";
@@ -101,7 +102,7 @@ export default function TextPanel({
       });
       update((r) => ({ ...r, text, suggestions: [], proofreadAt: undefined }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not write the text");
+      setError(errorMessage(e, "Could not write the text"));
     } finally {
       setBusy(false);
     }

@@ -10,6 +10,7 @@ import "@fontsource/noto-sans/600.css";
 import "@fontsource/noto-sans/700.css";
 import "@fontsource/roboto/900.css";
 import SettingsDialog from "@/components/SettingsDialog";
+import UpdateBanner from "@/components/UpdateBanner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body>
         {children}
         <SettingsDialog />
+        <UpdateBanner />
       </body>
     </html>
   );

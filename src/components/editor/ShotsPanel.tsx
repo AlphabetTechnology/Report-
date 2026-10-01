@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- local data URLs */
 
+import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Icon from "@/components/Icon";
 import { analyzeShot, runPool } from "@/lib/api";
@@ -78,7 +79,7 @@ export default function ShotsPanel({
         };
       });
     } catch (e) {
-      patchShot(shot.id, { status: "error", error: e instanceof Error ? e.message : "Failed" });
+      patchShot(shot.id, { status: "error", error: errorMessage(e, "Failed") });
     }
   }
 
@@ -108,7 +109,7 @@ export default function ShotsPanel({
       update((r) => ({ ...r, shots: [...r.shots, ...shots] }));
       await runPool(shots, 3, analyse);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not add images");
+      setError(errorMessage(e, "Could not add images"));
     } finally {
       setBusy(false);
     }
