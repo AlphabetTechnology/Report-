@@ -117,9 +117,9 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
   return data as T;
 }
 
-export async function analyzeShot(dataUrl: string, fileName: string): Promise<Analysis> {
-  if (!DIRECT_AI) return postJson("/api/analyze", { dataUrl, fileName });
-  return direct(async () => analyzeScreenshot(await browserClient(), dataUrl, fileName));
+export async function analyzeShot(dataUrl: string, fileName: string, hint?: string): Promise<Analysis> {
+  if (!DIRECT_AI) return postJson("/api/analyze", { dataUrl, fileName, hint });
+  return direct(async () => analyzeScreenshot(await browserClient(), dataUrl, fileName, hint));
 }
 
 export async function writeText(body: WriteRequest): Promise<ReportText> {

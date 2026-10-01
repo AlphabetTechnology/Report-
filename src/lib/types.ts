@@ -13,7 +13,7 @@ export const SECTIONS = [
   { key: "executive", title: "Executive Summary" },
   { key: "reach", title: "Account Reach" },
   { key: "views", title: "Account Views" },
-  { key: "engagement", title: "Engagement" },
+  { key: "engagement", title: "Engagement & Traffic" },
   { key: "visits", title: "Account Visits" },
   { key: "audience", title: "Audience Overview" },
   { key: "top_content", title: "Top Content" },
@@ -120,6 +120,10 @@ export interface Shot {
   section: ShotSection;
   order: number;
   status: "pending" | "analysing" | "done" | "error";
+  /** Kept in the portal but left out of the report (e.g. a card showing 0). */
+  hidden?: boolean;
+  /** Extra context for Claude, e.g. which dashboard a cut-out card came from. */
+  context?: string;
   error?: string;
   extraction?: Extraction;
 }

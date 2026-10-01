@@ -9,6 +9,8 @@ const named = z.object({ name: z.string(), value: z.string() });
 const AnalysisSchema = z.object({
   platform: z.enum(["facebook", "instagram", "tiktok", "youtube", "unknown"]),
   kind: z.enum(SHOT_KINDS),
+  useful: z.boolean(),
+  empty: z.boolean(),
   description: z.string(),
   metrics: z.array(metric),
   gender: z.array(metric),
@@ -36,13 +38,15 @@ For the screenshot, decide:
   - reach: a single "Reach", "Viewers", "Unique viewers" or "Impressions" card or chart
   - views: a single "Views" or "Video views" card or chart
   - profile_grid: a phone screenshot of the account's profile or photo grid / video grid
-  - interactions: "Content interactions", likes, comments, shares or engagement
+  - interactions: "Content interactions", "Link clicks", likes, comments, shares or engagement
   - visits: "Visits", "Profile visits", "Page visits" or "Profile views"
   - follows: "Follows", "New followers", "Subscribers gained"
   - demographics: followers total with an age and gender chart
   - locations: top towns/cities and top countries
   - top_content: a list or row of top posts / videos with their stats
   - other: anything else
+- useful: false when the image holds no report data at all, e.g. a page header or top bar, a date picker, a "Set a goal" or promotional banner, navigation tabs. Otherwise true.
+- empty: true when the card's headline number is 0 and its chart shows no activity (e.g. "Link clicks 0" with a flat line). Otherwise false.
 - description: one short sentence saying what the screenshot shows.
 - metrics: every headline number exactly as shown, with a clear label in Title Case, e.g. {"label":"Views","value":"296"}, {"label":"Watch Time","value":"1m 26s"}. Copy numbers exactly; keep "1.5K" as "1.5K" unless the exact figure is also shown, in which case prefer the exact figure. Do not include chart axis values.
 - gender: e.g. [{"label":"Women","value":"60.5%"},{"label":"Men","value":"39.5%"}] when shown, otherwise [].
@@ -50,12 +54,20 @@ For the screenshot, decide:
 - cities / countries: every row shown, name shortened to the city or country (e.g. "Mumbai", not "Mumbai, Maharashtra, India"), value as shown with % sign.
 - posts: for top content, each post with its caption start as title, date, and the view/like/comment/share numbers ("" when not shown).
 
+When a card breaks a number down by platform (e.g. Meta's Instagram "Views 1.5K" with "35 views" from Facebook and "1,418 views" from Instagram), use the figure for the screenshot's own platform as the main metric (Views: 1,418) and add the total as a separate metric (e.g. "Total Views (Facebook + Instagram)": "1.5K").
+
 Never invent numbers. Leave arrays empty and strings "" when something is not visible.`;
 
 export type Analysis = z.infer<typeof AnalysisSchema>;
 
 /** Reads one screenshot (a data URL) and returns its platform, type and numbers. */
-export async function analyzeScreenshot(client: Anthropic, dataUrl: string, fileName?: string): Promise<Analysis> {
+export async function analyzeScreenshot(
+  client: Anthropic,
+  dataUrl: string,
+  fileName?: string,
+  /** Extra context, e.g. "This card was cut from a Facebook dashboard for 1–30 September". */
+  hint?: string,
+): Promise<Analysis> {
   const match = /^data:(image\/(?:png|jpeg|webp|gif));base64,(.+)$/.exec(dataUrl ?? "");
   if (!match) throw new ClaudeError("Expected a PNG, JPEG, WebP or GIF image", 400);
   const mediaType = match[1] as "image/png" | "image/jpeg" | "image/webp" | "image/gif";
@@ -66,7 +78,10 @@ export async function analyzeScreenshot(client: Anthropic, dataUrl: string, file
     maxTokens: 8000,
     content: [
       { type: "image", source: { type: "base64", media_type: mediaType, data: match[2] } },
-      { type: "text", text: `Analyse this screenshot${fileName ? ` (file name: ${fileName})` : ""}.` },
+      {
+        type: "text",
+        text: `Analyse this screenshot${fileName ? ` (file name: ${fileName})` : ""}.${hint ? `\n\n${hint}` : ""}`,
+      },
     ],
   });
 }

@@ -1894,3 +1894,8 @@ textarea {
   font-size: 13.5px;
   animation: rise 0.3s ease both;
 }
+
+.shot.dim img {
+  opacity: 0.4;
+  filter: grayscale(1);
+}

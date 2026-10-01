@@ -72,7 +72,7 @@ export default function TextPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const t = report.text;
-  const readable = report.shots.filter((s) => s.extraction);
+  const readable = report.shots.filter((s) => s.extraction && !s.hidden);
   const reading = report.shots.some((s) => s.status === "pending" || s.status === "analysing");
 
   const set = (path: string, value: unknown) =>

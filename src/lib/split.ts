@@ -1,0 +1,162 @@
+"use client";
+
+/**
+ * Finds the white "cards" in an analytics screenshot (Meta Business Suite,
+ * TikTok Studio, YouTube Studio all draw white cards on a tinted background).
+ *
+ * - A grid of cards side by side (e.g. Views / Reach / Interactions / Visits)
+ *   is cut into one image per card, so each card can go to its own report section.
+ * - Anything else is just trimmed to the cards (drops the page header and margins).
+ */
+
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export type CardLayout =
+  | { type: "grid"; cards: Rect[] }
+  | { type: "trim"; rect: Rect }
+  | { type: "none" };
+
+const union = (rs: Rect[]): Rect => {
+  const x0 = Math.min(...rs.map((r) => r.x));
+  const y0 = Math.min(...rs.map((r) => r.y));
+  const x1 = Math.max(...rs.map((r) => r.x + r.w));
+  const y1 = Math.max(...rs.map((r) => r.y + r.h));
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+};
+
+const MAX_SIDE = 1000; // detection runs on a smaller copy; rects are scaled back
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Could not read image"));
+    img.src = src;
+  });
+}
+
+/** Segments [a, b) where the profile is "card", joining gaps narrower than minGap. */
+function segments(profile: Float32Array, minGap: number): [number, number][] {
+  const segs: [number, number][] = [];
+  let start = -1;
+  for (let i = 0; i <= profile.length; i++) {
+    const on = i < profile.length && profile[i] >= 0.5;
+    if (on && start < 0) start = i;
+    if (!on && start >= 0) {
+      const last = segs[segs.length - 1];
+      if (last && start - last[1] < minGap) last[1] = i;
+      else segs.push([start, i]);
+      start = -1;
+    }
+  }
+  return segs;
+}
+
+export function detectLayout(white: Uint8Array, W: number, H: number): Rect[] {
+  const minGap = Math.max(4, Math.round(Math.max(W, H) * 0.0055));
+  const out: Rect[] = [];
+
+  const cut = (r: Rect, horizontal: boolean, depth: number, settled: boolean) => {
+    if (depth > 8) {
+      out.push(r);
+      return;
+    }
+    const len = horizontal ? r.h : r.w;
+    const profile = new Float32Array(len);
+    for (let i = 0; i < len; i++) {
+      let n = 0;
+      if (horizontal) {
+        const row = (r.y + i) * W;
+        for (let x = r.x; x < r.x + r.w; x++) n += white[row + x];
+        profile[i] = n / r.w;
+      } else {
+        const x = r.x + i;
+        for (let y = r.y; y < r.y + r.h; y++) n += white[y * W + x];
+        profile[i] = n / r.h;
+      }
+    }
+    const segs = segments(profile, minGap);
+    if (!segs.length) return;
+    const sub = ([a, b]: [number, number]): Rect =>
+      horizontal ? { x: r.x, y: r.y + a, w: r.w, h: b - a } : { x: r.x + a, y: r.y, w: b - a, h: r.h };
+    if (segs.length === 1) {
+      const s = sub(segs[0]);
+      if (settled) out.push(s);
+      else cut(s, !horizontal, depth + 1, true);
+      return;
+    }
+    for (const seg of segs) cut(sub(seg), !horizontal, depth + 1, false);
+  };
+
+  cut({ x: 0, y: 0, w: W, h: H }, true, 0, false);
+  return out.filter((r) => r.w >= W * 0.15 && r.h >= Math.max(24, H * 0.04));
+}
+
+/** True when at least two cards sit side by side (a dashboard grid). */
+function isGrid(rects: Rect[]): boolean {
+  for (let i = 0; i < rects.length; i++) {
+    for (let j = i + 1; j < rects.length; j++) {
+      const a = rects[i];
+      const b = rects[j];
+      const overlap = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+      const apart = a.x + a.w <= b.x || b.x + b.w <= a.x;
+      if (apart && overlap > Math.min(a.h, b.h) * 0.5) return true;
+    }
+  }
+  return false;
+}
+
+export async function findCards(dataUrl: string): Promise<CardLayout> {
+  const img = await loadImage(dataUrl);
+  const scale = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
+  const W = Math.round(img.width * scale);
+  const H = Math.round(img.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(img, 0, 0, W, H);
+  const { data } = ctx.getImageData(0, 0, W, H);
+  const white = new Uint8Array(W * H);
+  for (let i = 0, p = 0; i < white.length; i++, p += 4) {
+    white[i] = data[p] >= 248 && data[p + 1] >= 248 && data[p + 2] >= 248 ? 1 : 0;
+  }
+
+  const rects = detectLayout(white, W, H);
+  if (!rects.length) return { type: "none" };
+  const back = (r: Rect): Rect => ({
+    x: Math.round(r.x / scale),
+    y: Math.round(r.y / scale),
+    w: Math.round(r.w / scale),
+    h: Math.round(r.h / scale),
+  });
+
+  if (rects.length >= 2 && isGrid(rects)) {
+    const cards = rects.sort((a, b) => a.y - b.y || a.x - b.x).map(back);
+    return { type: "grid", cards };
+  }
+
+  // Otherwise trim to the area covered by cards if that removes a real margin.
+  const all = union(rects);
+  if (all.w * all.h > W * H * 0.92) return { type: "none" };
+  return { type: "trim", rect: back(all) };
+}
+
+/** Crops part of an image; keeps PNG so text stays sharp. */
+export async function crop(dataUrl: string, r: Rect, pad = 0): Promise<{ dataUrl: string; width: number; height: number }> {
+  const img = await loadImage(dataUrl);
+  const x = Math.max(0, r.x - pad);
+  const y = Math.max(0, r.y - pad);
+  const w = Math.min(img.width - x, r.w + pad * 2);
+  const h = Math.min(img.height - y, r.h + pad * 2);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext("2d")!.drawImage(img, x, y, w, h, 0, 0, w, h);
+  return { dataUrl: canvas.toDataURL("image/png"), width: w, height: h };
+}

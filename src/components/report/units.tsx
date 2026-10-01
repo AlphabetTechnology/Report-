@@ -78,6 +78,8 @@ function fit(shot: Shot, maxW: number, maxH: number) {
 }
 
 function limitsFor(shot: Shot) {
+  // Audience screenshots carry small print (towns, countries): give them most of a page.
+  if (shot.kind === "demographics" || shot.kind === "locations") return { maxW: 176, maxH: 205 };
   if (WIDE_KINDS.has(shot.kind)) return { maxW: 176, maxH: 110 };
   if (shot.kind === "content_overview") return { maxW: 150, maxH: 86 };
   return { maxW: 122, maxH: 78 };
@@ -249,7 +251,7 @@ const BADGE_3D: Record<ShotSection, boolean> = {
 
 function shotsFor(report: Report, section: ShotSection, platform: Platform | null) {
   return report.shots
-    .filter((s) => s.section === section && s.platform === platform)
+    .filter((s) => s.section === section && s.platform === platform && !s.hidden)
     .sort((a, b) => a.order - b.order);
 }
 

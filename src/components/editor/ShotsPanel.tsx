@@ -6,6 +6,7 @@ import { useState } from "react";
 import Icon from "@/components/Icon";
 import { analyzeShot, runPool } from "@/lib/api";
 import { imageForApi, prepareScreenshot } from "@/lib/image";
+import { crop, findCards, type CardLayout } from "@/lib/split";
 import { newId } from "@/lib/store";
 import {
   KIND_SECTION,
@@ -38,14 +39,22 @@ export default function ShotsPanel({
   const [over, setOver] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const [removed, setRemoved] = useState(0);
 
   const patchShot = (id: string, patch: Partial<Shot>) =>
     update((r) => ({ ...r, shots: r.shots.map((s) => (s.id === id ? { ...s, ...patch } : s)) }));
 
-  async function analyse(shot: Shot) {
-    patchShot(shot.id, { status: "analysing", error: undefined });
+  async function analyse(shot: Shot, hint = shot.context) {
+    patchShot(shot.id, { status: "analysing", error: undefined, context: hint });
     try {
-      const a = await analyzeShot(await imageForApi(shot.dataUrl), shot.fileName);
+      const a = await analyzeShot(await imageForApi(shot.dataUrl), shot.fileName, hint);
+      if (a.useful === false && hint) {
+        // A page header or banner cut out of a dashboard: no report data, drop it.
+        update((r) => ({ ...r, shots: r.shots.filter((s) => s.id !== shot.id) }));
+        setRemoved((n) => n + 1);
+        return;
+      }
       const platform = a.platform === "unknown" ? null : a.platform;
       update((r) => {
         const platforms =
@@ -64,6 +73,8 @@ export default function ShotsPanel({
                   section: KIND_SECTION[a.kind],
                   order: kindRank(a.kind) + (s.order % 1000),
                   status: "done",
+                  // Never delete a whole upload: if it looks empty or irrelevant, just hide it.
+                  hidden: a.empty === true || a.useful === false,
                   extraction: {
                     description: a.description,
                     metrics: a.metrics,
@@ -87,27 +98,68 @@ export default function ShotsPanel({
     const images = files.filter((f) => f.type.startsWith("image/"));
     if (!images.length) return;
     setError("");
+    setInfo("");
+    setRemoved(0);
     setBusy(true);
     try {
-      const base = report.shots.length;
-      const shots: Shot[] = [];
+      let seq = report.shots.length;
+      const make = (img: { dataUrl: string; width: number; height: number }, fileName: string): Shot => ({
+        id: newId(),
+        dataUrl: img.dataUrl,
+        width: img.width,
+        height: img.height,
+        fileName,
+        platform: null,
+        kind: "other",
+        section: "executive",
+        order: kindRank("other") + (seq++ % 1000),
+        status: "pending",
+      });
+
+      const singles: Shot[] = [];
+      const groups: { full: string; name: string; cards: Shot[] }[] = [];
       for (const [i, f] of images.entries()) {
         const img = await prepareScreenshot(f);
-        shots.push({
-          id: newId(),
-          dataUrl: img.dataUrl,
-          width: img.width,
-          height: img.height,
-          fileName: f.name || `pasted-${i + 1}.png`,
-          platform: null,
-          kind: "other",
-          section: "executive",
-          order: kindRank("other") + ((base + i) % 1000),
-          status: "pending",
-        });
+        const name = f.name || `pasted-${i + 1}.png`;
+        const layout: CardLayout = await findCards(img.dataUrl).catch(() => ({ type: "none" }) as const);
+        if (layout.type === "grid") {
+          // A dashboard with several cards: one image per card, so each goes to its own section.
+          const cards: Shot[] = [];
+          for (const [j, r] of layout.cards.entries()) {
+            cards.push(make(await crop(img.dataUrl, r, 2), `${name} · part ${j + 1}`));
+          }
+          groups.push({ full: img.dataUrl, name, cards });
+        } else if (layout.type === "trim") {
+          singles.push(make(await crop(img.dataUrl, layout.rect, 4), name));
+        } else {
+          singles.push(make(img, name));
+        }
       }
-      update((r) => ({ ...r, shots: [...r.shots, ...shots] }));
-      await runPool(shots, 3, analyse);
+      const added = [...singles, ...groups.flatMap((g) => g.cards)];
+      update((r) => ({ ...r, shots: [...r.shots, ...added] }));
+      if (groups.length) {
+        const n = groups.reduce((t, g) => t + g.cards.length, 0);
+        setInfo(
+          `Cut ${groups.length} screenshot${groups.length === 1 ? "" : "s"} into ${n} separate parts so each one goes to its own section.`,
+        );
+      }
+
+      await Promise.all([
+        runPool(singles, 3, (s) => analyse(s)),
+        runPool(groups, 1, async (g) => {
+          // Read the whole dashboard once to learn its platform (cards alone often don't show it).
+          let hint = "This image is one card or part cut out of a larger analytics screenshot.";
+          try {
+            const full = await analyzeShot(await imageForApi(g.full), g.name);
+            if (full.platform !== "unknown") {
+              hint += ` The dashboard is for ${PLATFORM_LABEL[full.platform]}, so the platform is "${full.platform}".`;
+            }
+          } catch {
+            /* the cards are still read on their own */
+          }
+          await runPool(g.cards, 3, (c) => analyse(c, hint));
+        }),
+      ]);
     } catch (e) {
       setError(errorMessage(e, "Could not add images"));
     } finally {
@@ -171,6 +223,23 @@ export default function ShotsPanel({
         </div>
       )}
       {error && <div className="notice err">{error}</div>}
+      {info && (
+        <div className="notice" style={{ marginTop: 12 }}>
+          <Icon name="scissors" size={16} />
+          <span>
+            {info}
+            {removed > 0 && ` Removed ${removed} piece${removed === 1 ? "" : "s"} with no data (page header, banners).`}
+          </span>
+        </div>
+      )}
+      {report.shots.some((s) => s.hidden) && (
+        <div className="notice warn" style={{ marginTop: 12 }}>
+          <Icon name="eyeOff" size={16} />
+          <span>
+            Cards showing 0 (e.g. Link clicks 0) are hidden from the report. Click the eye on a card to show it.
+          </span>
+        </div>
+      )}
       {failed.length > 0 && (
         <div className="notice err" style={{ marginTop: 12 }}>
           {failed.length} screenshot(s) could not be read.{" "}
@@ -202,7 +271,7 @@ export default function ShotsPanel({
               {sectionTitle(section)} <span className="chip">{inSection.length}</span>
             </div>
             {inSection.map((s) => (
-              <div className="shot" key={s.id}>
+              <div className={`shot${s.hidden ? " dim" : ""}`} key={s.id}>
                 <a href={s.dataUrl} target="_blank" rel="noreferrer" title="Open full size">
                   <img src={s.dataUrl} alt="" />
                 </a>
@@ -215,6 +284,10 @@ export default function ShotsPanel({
                     ) : s.status === "error" ? (
                       <span className="chip red" title={s.error}>
                         Error
+                      </span>
+                    ) : s.hidden ? (
+                      <span className="chip" title="Not shown in the report">
+                        <Icon name="eyeOff" size={12} /> Hidden
                       </span>
                     ) : s.platform ? (
                       <span className="chip green">{PLATFORM_LABEL[s.platform]}</span>
@@ -266,6 +339,13 @@ export default function ShotsPanel({
                       </button>
                       <button className="btn small ghost icon" title="Move down" onClick={() => move(s, 1)}>
                         <Icon name="down" size={15} />
+                      </button>
+                      <button
+                        className="btn small ghost icon"
+                        title={s.hidden ? "Show in report" : "Hide from report"}
+                        onClick={() => patchShot(s.id, { hidden: !s.hidden })}
+                      >
+                        <Icon name={s.hidden ? "eyeOff" : "eye"} size={15} />
                       </button>
                       <button className="btn small ghost icon" title="Read again" onClick={() => analyse(s)}>
                         <Icon name="refresh" size={14} />
