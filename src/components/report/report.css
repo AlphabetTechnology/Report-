@@ -1,0 +1,689 @@
+/* SWS social media report template (A4). All sizes in mm so screen and print match. */
+
+.rpt {
+  --blue: #1471b9;
+  --orange: #f7941f;
+  --sky: #1ea0dc;
+  --card-border: #3aa0dd;
+  --ink: #111;
+  --peach: #fdebdd;
+  --grey-box: #ededef;
+  font-family: "Noto Sans", system-ui, sans-serif;
+  color: var(--ink);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.rpt * {
+  box-sizing: border-box;
+}
+
+.rpt-page {
+  position: relative;
+  width: 210mm;
+  height: 297mm;
+  overflow: hidden;
+  background: linear-gradient(168deg, #fff 52%, #ececec 100%);
+  page-break-after: always;
+  break-after: page;
+}
+
+.rpt-page + .rpt-page {
+  margin-top: 8mm;
+}
+
+.rpt-wave-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 210mm;
+  height: 22mm;
+  display: block;
+}
+
+.rpt-footer {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 210mm;
+  height: 25mm;
+}
+
+.rpt-footer svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.rpt-footer-url,
+.rpt-footer-num {
+  position: absolute;
+  bottom: 5.2mm;
+  font-family: Poppins, sans-serif;
+  font-weight: 600;
+  font-size: 10.5pt;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.rpt-footer-url {
+  left: 10.5mm;
+}
+
+.rpt-footer-num {
+  right: 10mm;
+}
+
+/* ---------- content area ---------- */
+
+.rpt-body {
+  position: absolute;
+  top: 24mm;
+  left: 15mm;
+  width: 180mm;
+}
+
+.rpt-unit {
+  display: flow-root;
+}
+
+.rpt p {
+  margin: 0 0 2.6mm;
+  font-size: 10.6pt;
+  line-height: 1.62;
+}
+
+.rpt strong {
+  font-weight: 700;
+}
+
+.rpt-section-bar {
+  position: relative;
+  margin-left: -15mm;
+  width: 92mm;
+  height: 9mm;
+  padding-left: 15mm;
+  display: flex;
+  align-items: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13.4pt;
+  border-top-right-radius: 3mm;
+  margin-bottom: 5mm;
+}
+
+.rpt-section-bar.blue {
+  background: var(--blue);
+}
+
+.rpt-section-bar.orange {
+  background: var(--orange);
+}
+
+.rpt-platform-title {
+  font-weight: 700;
+  font-size: 18.5pt;
+  margin: 0 0 1.5mm;
+  line-height: 1.25;
+}
+
+.rpt-metrics {
+  margin: 0 0 2.6mm;
+  font-size: 10.6pt;
+  line-height: 1.55;
+}
+
+.rpt-metrics div strong {
+  margin-right: 0.3em;
+}
+
+.rpt-gap {
+  height: 3mm;
+}
+
+/* ---------- screenshot cards ---------- */
+
+.rpt-card-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 11mm;
+  padding-bottom: 5mm;
+}
+
+.rpt-card {
+  position: relative;
+  border: 0.55mm solid var(--card-border);
+  border-radius: 4mm;
+  background: #fff;
+  padding: 2.4mm;
+  display: flex;
+  gap: 2.4mm;
+}
+
+.rpt-card img.rpt-shot {
+  display: block;
+  border-radius: 1.5mm;
+  object-fit: contain;
+}
+
+.rpt-badge {
+  position: absolute;
+  top: -10.5mm;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 19mm;
+  height: 19mm;
+  border-radius: 50%;
+  background: #fff;
+  border: 0.7mm solid var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.rpt-badge img,
+.rpt-badge svg {
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+}
+
+.rpt-badge.r-3d img {
+  width: 86%;
+  height: 86%;
+}
+
+/* ---------- phone mockup (profile grid) ---------- */
+
+.rpt-phone-unit {
+  position: relative;
+  padding-bottom: 4mm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 6mm;
+}
+
+.rpt-phone-rings {
+  position: absolute;
+  top: 18mm;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 148mm;
+  height: 148mm;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 38%, #e4f2fc 38% 55%, #f1f8fd 55% 71%, #e9f4fc 71% 100%);
+}
+
+.rpt-phone {
+  position: relative;
+  background: #1b1b1d;
+  border-radius: 10mm;
+  padding: 2.6mm;
+  box-shadow: 0 0 0 0.5mm #4a4a4e, 0 2mm 5mm rgba(0, 0, 0, 0.25);
+}
+
+.rpt-phone::before {
+  content: "";
+  position: absolute;
+  top: 4.4mm;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 21mm;
+  height: 5.4mm;
+  background: #050505;
+  border-radius: 3mm;
+  z-index: 2;
+}
+
+.rpt-phone img {
+  display: block;
+  border-radius: 7.6mm;
+  object-fit: cover;
+  object-position: top;
+}
+
+.rpt-phone-icon {
+  position: absolute;
+  left: 4mm;
+  top: 70mm;
+  width: 22mm;
+  height: 22mm;
+  border-radius: 50%;
+  background: #fff;
+  border: 0.6mm solid var(--sky);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rpt-phone-icon img,
+.rpt-phone-icon svg {
+  width: 72%;
+  height: 72%;
+}
+
+.rpt-phone-caption {
+  position: relative;
+  margin-top: 4mm;
+  font-size: 13pt;
+  letter-spacing: 0.06em;
+}
+
+/* ---------- audience ---------- */
+
+.rpt-sub-bar {
+  position: relative;
+  margin-left: -15mm;
+  width: 100mm;
+  height: 10mm;
+  padding-left: 13mm;
+  display: flex;
+  align-items: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14pt;
+  margin-top: 6mm;
+  margin-bottom: 6mm;
+}
+
+.rpt-sub-bar.big {
+  font-size: 18pt;
+  height: 11mm;
+}
+
+.rpt-sub-bar.blue {
+  background: var(--blue);
+}
+
+.rpt-sub-bar.orange {
+  background: var(--orange);
+}
+
+.rpt-sub-bar .rpt-badge {
+  top: 50%;
+  left: auto;
+  right: -10mm;
+  transform: translateY(-50%);
+}
+
+.rpt-bullets {
+  list-style: none;
+  margin: 0 0 3mm;
+  padding: 0 0 0 1.5mm;
+  font-size: 10.6pt;
+  line-height: 1.95;
+}
+
+.rpt-bullets li::before {
+  content: "•";
+  margin-right: 2mm;
+}
+
+/* ---------- top content ---------- */
+
+.rpt-top-item {
+  margin: 0 0 1.8mm;
+  font-size: 10.6pt;
+  line-height: 1.55;
+}
+
+/* ---------- focus ---------- */
+
+.rpt-focus {
+  margin: 0 0 3.2mm;
+}
+
+.rpt-focus h3 {
+  font-size: 13pt;
+  font-weight: 700;
+  margin: 0 0 2mm;
+}
+
+.rpt-focus h3::before {
+  content: "•";
+  margin-right: 2.2mm;
+}
+
+.rpt-focus-body {
+  padding-left: 7.5mm;
+  font-size: 10.4pt;
+  line-height: 1.5;
+}
+
+.rpt-focus-body div {
+  margin-bottom: 1.8mm;
+}
+
+.rpt-focus-body strong {
+  display: block;
+}
+
+/* ---------- cover ---------- */
+
+.rpt-cover {
+  background: #fff;
+}
+
+.rpt-cover-photo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 210mm;
+  height: 158mm;
+  object-fit: cover;
+  object-position: 60% 30%;
+}
+
+.rpt-cover-fade {
+  position: absolute;
+  top: 60mm;
+  left: 0;
+  width: 210mm;
+  height: 100mm;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.85) 55%, #fff 92%);
+}
+
+.rpt-cover-glow {
+  position: absolute;
+  top: 62mm;
+  left: 14mm;
+  width: 92mm;
+  height: 92mm;
+  border-radius: 50%;
+  background: rgba(253, 220, 190, 0.45);
+  filter: blur(1mm);
+}
+
+.rpt-cover-bottom {
+  position: absolute;
+  top: 158mm;
+  left: 0;
+  width: 210mm;
+  height: 139mm;
+  background: linear-gradient(168deg, #fff 40%, #ececec 100%);
+}
+
+.rpt-float {
+  position: absolute;
+  object-fit: contain;
+}
+
+.rpt-cover-title {
+  position: absolute;
+  z-index: 0;
+  isolation: isolate;
+  top: 72mm;
+  left: 0;
+  width: 210mm;
+  text-align: center;
+  font-family: Poppins, sans-serif;
+  font-weight: 900;
+  line-height: 0.86;
+}
+
+.rpt-cover-title .w,
+.rpt-cover-title .sub {
+  position: relative;
+  display: block;
+}
+
+.rpt-cover-title .w {
+  font-size: 118pt;
+  letter-spacing: -0.01em;
+}
+
+/* White outline drawn behind the letters (a copy of the text with a thick stroke). */
+.rpt-cover-title .w::before,
+.rpt-cover-title .sub::before {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  color: #fff;
+  -webkit-text-stroke: 7.2mm #fff;
+  filter: drop-shadow(0 1.2mm 1.8mm rgba(0, 0, 0, 0.12));
+}
+
+.rpt-cover-title .sub::before {
+  -webkit-text-stroke: 3.2mm #fff;
+  filter: none;
+}
+
+.rpt-cover-title .social {
+  color: var(--orange);
+}
+
+.rpt-cover-title .media {
+  color: var(--blue);
+  margin-top: 2mm;
+}
+
+.rpt-cover-title .sub {
+  margin-top: 4.5mm;
+  font-weight: 700;
+  font-size: 33pt;
+  color: #0c0c0c;
+  letter-spacing: 0.005em;
+}
+
+.rpt-prep {
+  position: absolute;
+  top: 179mm;
+  width: 74mm;
+  height: 39mm;
+  border-radius: 6mm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 7mm;
+}
+
+.rpt-prep.for {
+  left: 28mm;
+  background: var(--peach);
+}
+
+.rpt-prep.by {
+  left: 108mm;
+  background: var(--grey-box);
+  padding-top: 5.5mm;
+}
+
+.rpt-prep-label {
+  font-weight: 700;
+  font-size: 12.6pt;
+  color: var(--sky);
+  margin-bottom: 1.5mm;
+}
+
+.rpt-prep img {
+  max-width: 34mm;
+  max-height: 21mm;
+  object-fit: contain;
+}
+
+.rpt-prep.by img {
+  max-width: 38mm;
+  max-height: 22mm;
+}
+
+.rpt-cover-info {
+  position: absolute;
+  top: 230mm;
+  left: 29mm;
+  padding-left: 9mm;
+  font-size: 13.4pt;
+  line-height: 1.82;
+}
+
+.rpt-cover-info::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1mm;
+  bottom: 1.5mm;
+  width: 0.55mm;
+  background: linear-gradient(to bottom, var(--orange) 0 50%, var(--sky) 50% 100%);
+}
+
+.rpt-cover-info b {
+  color: var(--sky);
+  font-weight: 700;
+  margin-right: 0.35em;
+}
+
+/* ---------- table of contents ---------- */
+
+.rpt-toc-title {
+  position: absolute;
+  top: 9mm;
+  left: 18mm;
+  font-family: Poppins, sans-serif;
+  font-weight: 900;
+  font-size: 41pt;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+}
+
+.rpt-toc-title span {
+  display: block;
+}
+
+.rpt-toc-title .c {
+  color: var(--blue);
+}
+
+.rpt-toc-bars {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  height: 48mm;
+}
+
+.rpt-toc-bars i {
+  display: block;
+  width: 6mm;
+  height: 100%;
+}
+
+.rpt-toc-list {
+  position: absolute;
+  top: 50mm;
+  left: 13mm;
+  width: 184mm;
+}
+
+.rpt-toc-row {
+  display: flex;
+  align-items: center;
+  height: 26mm;
+  border-bottom: 0.3mm solid #e2e2e2;
+  margin-right: 8mm;
+}
+
+.rpt-toc-row:last-child {
+  border-bottom: none;
+}
+
+.rpt-toc-row img {
+  width: 17.5mm;
+  height: 17.5mm;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-left: 2mm;
+}
+
+.rpt-toc-num {
+  font-family: Poppins, sans-serif;
+  font-weight: 800;
+  font-size: 15.5pt;
+  width: 13mm;
+  margin-left: 9mm;
+}
+
+.rpt-toc-name {
+  flex: 1;
+  font-weight: 700;
+  font-size: 13.4pt;
+}
+
+.rpt-toc-page {
+  font-family: Poppins, sans-serif;
+  font-weight: 900;
+  font-size: 21pt;
+  margin-right: -6mm;
+}
+
+.c-blue {
+  color: var(--blue);
+}
+
+.c-orange {
+  color: var(--orange);
+}
+
+.c-sky {
+  color: var(--sky);
+}
+
+/* ---------- thank you ---------- */
+
+.rpt-thanks {
+  background: #fff;
+}
+
+.rpt-thanks-logo {
+  position: absolute;
+  top: 100mm;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 62mm;
+}
+
+.rpt-thanks-text {
+  position: absolute;
+  top: 157mm;
+  width: 100%;
+  text-align: center;
+  font-family: Roboto, sans-serif;
+  font-weight: 900;
+  font-size: 58pt;
+  color: var(--blue);
+  letter-spacing: -0.005em;
+}
+
+/* ---------- measuring + print ---------- */
+
+.rpt-measure {
+  position: fixed;
+  left: -400mm;
+  top: 0;
+  width: 180mm;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  .rpt-measure {
+    display: none;
+  }
+
+  .rpt-page {
+    box-shadow: none !important;
+    margin: 0 !important;
+  }
+
+  .rpt-page + .rpt-page {
+    margin-top: 0;
+  }
+}
