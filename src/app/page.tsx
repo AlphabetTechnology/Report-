@@ -8,7 +8,7 @@ import ClientForm, { ClientLogo, ENGLISH_LABEL } from "@/components/ClientForm";
 import DateField from "@/components/DateField";
 import Icon, { type IconName } from "@/components/Icon";
 import { openSettings } from "@/components/SettingsDialog";
-import SyncBadge from "@/components/SyncBadge";
+import { IntegrationStatus } from "@/components/SyncBadge";
 import { PlatformIcon } from "@/components/report/icons";
 import { formatMonth, formatPeriod, formatShortDate, MONTH_NAMES, previousMonth, toIso } from "@/lib/format";
 import { reportProgress } from "@/lib/progress";
@@ -529,12 +529,12 @@ export default function Home() {
           Settings
         </div>
         <button className="nav-item" onClick={openSettings}>
-          <Icon name="settings" size={18} />
-          API key &amp; Google Drive
+          <Icon name="link" size={18} />
+          Integrations
         </button>
         <div className="sidebar-foot">
-          <SyncBadge dark />
-          <div style={{ marginTop: 10 }}>
+          <IntegrationStatus />
+          <div>
             Reports are saved in this portal first, then synced to the team&apos;s Google Drive folder.
           </div>
         </div>

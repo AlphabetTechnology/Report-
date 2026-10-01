@@ -173,8 +173,8 @@ export default function ReportEditor() {
           {saved ? "Saved" : "Saving"} · {pageCount} pages
         </span>
         <SyncBadge />
-        <button className="btn ghost icon" title="Settings: API key & Google Drive" onClick={openSettings}>
-          <Icon name="settings" size={17} />
+        <button className="btn ghost icon" title="Integrations: Claude & Google Drive" onClick={openSettings}>
+          <Icon name="link" size={17} />
         </button>
         <button className="btn accent" onClick={downloadPdf}>
           <Icon name="download" size={16} />

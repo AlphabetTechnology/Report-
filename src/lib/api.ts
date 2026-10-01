@@ -13,7 +13,10 @@ import type { ReportText } from "./types";
 export const DIRECT_AI = process.env.NEXT_PUBLIC_DIRECT_AI === "1";
 
 const KEY_STORAGE = "sws_anthropic_key";
+const VERIFIED_STORAGE = "sws_anthropic_verified";
 export const NEED_KEY_EVENT = "sws:need-key";
+/** Fired when the key is saved, removed or verified, so status badges update. */
+export const KEY_CHANGED_EVENT = "sws:key-changed";
 
 export function getApiKey(): string {
   try {
@@ -23,12 +26,50 @@ export function getApiKey(): string {
   }
 }
 
-export function setApiKey(key: string) {
+/** When the saved key was last confirmed to work (0 if never). */
+export function keyVerifiedAt(): number {
+  try {
+    return Number(localStorage.getItem(VERIFIED_STORAGE)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function setApiKey(key: string, verifiedAt = 0) {
   try {
     if (key) localStorage.setItem(KEY_STORAGE, key);
     else localStorage.removeItem(KEY_STORAGE);
+    if (key && verifiedAt) localStorage.setItem(VERIFIED_STORAGE, String(verifiedAt));
+    else localStorage.removeItem(VERIFIED_STORAGE);
   } catch {
     /* storage blocked: the key just won't be remembered */
+  }
+  window.dispatchEvent(new Event(KEY_CHANGED_EVENT));
+}
+
+/** "sk-ant-api03-…7Qx2" */
+export function maskKey(key: string): string {
+  return key.length > 16 ? `${key.slice(0, 12)}…${key.slice(-4)}` : "••••";
+}
+
+/**
+ * Checks a key with Anthropic (a free model lookup, no tokens used).
+ * Resolves on success, throws a plain-English error otherwise.
+ */
+export async function verifyApiKey(key: string): Promise<void> {
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  const { MODEL } = await import("./ai/call");
+  const client = new Anthropic({ apiKey: key.trim(), dangerouslyAllowBrowser: true, maxRetries: 0, timeout: 20_000 });
+  try {
+    await client.models.retrieve(MODEL);
+  } catch (e) {
+    if (e instanceof Anthropic.AuthenticationError) throw new Error("Anthropic didn't accept this key. Check it was copied in full.");
+    if (e instanceof Anthropic.PermissionDeniedError) throw new Error("This key doesn't have access to Claude Opus 5.5.");
+    if (e instanceof Anthropic.NotFoundError) throw new Error("This key's account can't use Claude Opus 5.5.");
+    if (e instanceof Anthropic.RateLimitError) return; // the key works, just busy right now
+    if (e instanceof Anthropic.APIConnectionError) throw new Error("Couldn't reach Anthropic. Check your internet connection.");
+    if (e instanceof Anthropic.APIError) throw new Error(`Anthropic error ${e.status}: ${e.message}`);
+    throw e;
   }
 }
 
@@ -38,7 +79,7 @@ async function browserClient() {
   const key = getApiKey();
   if (!key) {
     askForKey();
-    throw new Error("Add your Anthropic API key first (Settings → API key).");
+    throw new Error("Connect Claude first: Settings → Integrations → Claude.");
   }
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
   return new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true, maxRetries: 2 });
@@ -48,7 +89,10 @@ async function direct<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (e) {
-    if (e && typeof e === "object" && "status" in e && e.status === 401) askForKey();
+    if (e && typeof e === "object" && "status" in e && e.status === 401) {
+      setApiKey(getApiKey(), 0); // no longer verified
+      askForKey();
+    }
     throw e;
   }
 }
