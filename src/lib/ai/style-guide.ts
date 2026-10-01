@@ -1,4 +1,3 @@
-import "server-only";
 
 /**
  * Excerpts from the approved SWS report for Aakaar (September 2026).

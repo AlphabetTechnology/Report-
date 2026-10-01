@@ -1,0 +1,50 @@
+# Publishes the app to GitHub Pages: https://alphabettechnology.github.io/Report-/
+# Pages has no server, so this build calls Claude from the browser with each
+# user's own API key (see src/lib/api.ts). The site is pushed to the gh-pages branch.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [claude/laughing-ramanujan-6kkg0x, main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build static site
+        run: |
+          # Server-only routes are not part of the static site.
+          rm -rf src/app/api src/app/login
+          npx next build
+          touch out/.nojekyll
+        env:
+          STATIC_EXPORT: "1"
+          NEXT_PUBLIC_DIRECT_AI: "1"
+          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+
+      - name: Publish to gh-pages branch
+        run: |
+          cd out
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Deploy ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages

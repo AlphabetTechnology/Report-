@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element -- report pages are printed, plain <img> keeps them exact */
 import type { Platform } from "@/lib/types";
+import { asset } from "@/lib/asset";
 
 export const PLATFORM_RING: Record<Platform, string> = {
   facebook: "#1471b9",
@@ -53,9 +54,9 @@ function YouTubeIcon() {
 export function PlatformIcon({ platform }: { platform: Platform }) {
   switch (platform) {
     case "facebook":
-      return <img src="/template/badges/facebook.png" alt="Facebook" />;
+      return <img src={asset("/template/badges/facebook.png")} alt="Facebook" />;
     case "instagram":
-      return <img src="/template/badges/instagram.png" alt="Instagram" />;
+      return <img src={asset("/template/badges/instagram.png")} alt="Instagram" />;
     case "tiktok":
       return <TikTokIcon />;
     case "youtube":
@@ -69,7 +70,7 @@ export function Badge({ platform, style3d }: { platform: Platform; style3d: bool
   return (
     <div className={`rpt-badge${has3d ? " r-3d" : ""}`} style={{ borderColor: PLATFORM_RING[platform] }}>
       {has3d ? (
-        <img src={`/template/badges/${platform}-3d.png`} alt="" />
+        <img src={asset(`/template/badges/${platform}-3d.png`)} alt="" />
       ) : (
         <PlatformIcon platform={platform} />
       )}

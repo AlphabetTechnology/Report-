@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import Icon from "@/components/Icon";
+import { asset } from "@/lib/asset";
 
 export default function Login() {
   const [password, setPassword] = useState("");
@@ -26,7 +27,7 @@ export default function Login() {
   return (
     <main className="login-page">
       <form className="login-card" onSubmit={submit}>
-        <img src="/template/sws-logo.png" alt="SWS" style={{ height: 60, marginBottom: 18 }} />
+        <img src={asset("/template/sws-logo.png")} alt="SWS" style={{ height: 60, marginBottom: 18 }} />
         <h2 style={{ fontSize: 22, marginBottom: 4 }}>Welcome back</h2>
         <p className="muted" style={{ margin: "0 0 20px" }}>
           Sign in to the SWS Report Builder.

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Icon from "@/components/Icon";
-import { postJson } from "@/lib/api";
+import { proofread } from "@/lib/api";
 import { getAt, listFields, setAt } from "@/lib/fields";
 import { newId } from "@/lib/store";
 import type { Client, Report, Suggestion } from "@/lib/types";
@@ -44,9 +44,7 @@ export default function ProofreadPanel({
     setBusy(true);
     setError("");
     try {
-      const { suggestions } = await postJson<{
-        suggestions: (Omit<Suggestion, "id" | "path"> & { fieldId: string })[];
-      }>("/api/proofread", {
+      const { suggestions } = await proofread({
         english,
         clientName: client?.name ?? "",
         fields,

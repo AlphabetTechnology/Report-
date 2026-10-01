@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import Icon from "@/components/Icon";
-import { postJson, runPool } from "@/lib/api";
+import { analyzeShot, runPool } from "@/lib/api";
 import { imageForApi, prepareScreenshot } from "@/lib/image";
 import { newId } from "@/lib/store";
 import {
@@ -14,7 +14,6 @@ import {
   SHOT_KIND_LABEL,
   SHOT_KINDS,
   SHOT_SECTIONS,
-  type Extraction,
   type Platform,
   type Report,
   type Shot,
@@ -22,7 +21,6 @@ import {
   type ShotSection,
 } from "@/lib/types";
 
-type Analysis = Extraction & { platform: Platform | "unknown"; kind: ShotKind };
 
 const sectionTitle = (s: ShotSection) => SECTIONS.find((x) => x.key === s)!.title;
 
@@ -46,10 +44,7 @@ export default function ShotsPanel({
   async function analyse(shot: Shot) {
     patchShot(shot.id, { status: "analysing", error: undefined });
     try {
-      const a = await postJson<Analysis>("/api/analyze", {
-        dataUrl: await imageForApi(shot.dataUrl),
-        fileName: shot.fileName,
-      });
+      const a = await analyzeShot(await imageForApi(shot.dataUrl), shot.fileName);
       const platform = a.platform === "unknown" ? null : a.platform;
       update((r) => {
         const platforms =

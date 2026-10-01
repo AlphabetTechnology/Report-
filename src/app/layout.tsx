@@ -9,6 +9,7 @@ import "@fontsource/noto-sans/400-italic.css";
 import "@fontsource/noto-sans/600.css";
 import "@fontsource/noto-sans/700.css";
 import "@fontsource/roboto/900.css";
+import KeyDialog from "@/components/KeyDialog";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,7 +20,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <KeyDialog />
+      </body>
     </html>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Icon from "@/components/Icon";
-import { postJson } from "@/lib/api";
+import { writeText } from "@/lib/api";
 import { formatMonth, formatPeriod, monthName } from "@/lib/format";
 import { setAt } from "@/lib/fields";
 import {
@@ -12,7 +12,6 @@ import {
   type Metric,
   type NamedValue,
   type Report,
-  type ReportText,
 } from "@/lib/types";
 
 function AutoText({ value, onChange, rows = 3 }: { value: string; onChange: (v: string) => void; rows?: number }) {
@@ -83,7 +82,7 @@ export default function TextPanel({
     setBusy(true);
     setError("");
     try {
-      const text = await postJson<ReportText>("/api/write", {
+      const text = await writeText({
         client: {
           name: client?.name ?? "",
           description: client?.description ?? "",

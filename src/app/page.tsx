@@ -8,6 +8,7 @@ import ClientForm, { ClientLogo, ENGLISH_LABEL } from "@/components/ClientForm";
 import DateField from "@/components/DateField";
 import Icon, { type IconName } from "@/components/Icon";
 import { PlatformIcon } from "@/components/report/icons";
+import { askForKey, DIRECT_AI } from "@/lib/api";
 import { formatMonth, formatPeriod, formatShortDate, MONTH_NAMES, previousMonth, toIso } from "@/lib/format";
 import { reportProgress } from "@/lib/progress";
 import {
@@ -21,6 +22,7 @@ import {
   saveReport,
 } from "@/lib/store";
 import { PLATFORM_LABEL, PLATFORMS, type Client, type Platform, type Report } from "@/lib/types";
+import { asset } from "@/lib/asset";
 
 type View = "dashboard" | "reports" | "clients";
 type Filter = "all" | "progress" | "ready";
@@ -73,7 +75,7 @@ function NewReportForm({
       updatedAt: now,
     };
     await saveReport(report);
-    router.push(`/report/${report.id}`);
+    router.push(`/report?id=${report.id}`);
   }
 
   return (
@@ -207,7 +209,7 @@ function ReportCard({
       <div className="body">
         <div className="row" style={{ alignItems: "flex-start" }}>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <Link className="name" href={`/report/${report.id}`}>
+            <Link className="name" href={`/report?id=${report.id}`}>
               {client?.name ?? "Unknown client"}
             </Link>
             <div className="period">{formatPeriod(report.periodStart, report.periodEnd, english)}</div>
@@ -254,7 +256,7 @@ function ReportCard({
         <button className="btn small ghost icon danger" title="Delete" onClick={onDelete}>
           <Icon name="trash" size={15} />
         </button>
-        <Link className="btn small primary" href={`/report/${report.id}`}>
+        <Link className="btn small primary" href={`/report?id=${report.id}`}>
           Open
           <Icon name="arrowRight" size={14} />
         </Link>
@@ -487,7 +489,7 @@ export default function Home() {
     <div className="shell">
       <aside className="sidebar">
         <Link className="brand-tile" href="/">
-          <img src="/template/sws-logo.png" alt="SWS" />
+          <img src={asset("/template/sws-logo.png")} alt="SWS" />
           <div>
             Report Builder
             <small>Social media reports</small>
@@ -519,6 +521,17 @@ export default function Home() {
           Import backup
         </button>
         <input ref={importRef} type="file" accept="application/json" hidden onChange={(e) => restore(e.target.files?.[0])} />
+        {DIRECT_AI && (
+          <>
+            <div className="nav-label" style={{ marginTop: 22 }}>
+              Settings
+            </div>
+            <button className="nav-item" onClick={askForKey}>
+              <Icon name="lock" size={18} />
+              API key
+            </button>
+          </>
+        )}
         <div className="sidebar-foot">
           Reports are saved in this browser. Export a backup to share them with a colleague.
         </div>
@@ -554,7 +567,7 @@ export default function Home() {
               </div>
               <div className="hero-art">
                 <div className="mini-cover" style={{ right: 96, top: 14, transform: "rotate(-8deg)", opacity: 0.85 }}>
-                  <img src="/template/cover/photo.jpg" alt="" />
+                  <img src={asset("/template/cover/photo.jpg")} alt="" />
                   <div className="t">
                     <b>SOCIAL</b>
                     <i>MEDIA</i>
@@ -562,7 +575,7 @@ export default function Home() {
                   <div className="wave" />
                 </div>
                 <div className="mini-cover" style={{ right: 14, top: 0, transform: "rotate(5deg)" }}>
-                  <img src="/template/cover/photo.jpg" alt="" />
+                  <img src={asset("/template/cover/photo.jpg")} alt="" />
                   <div className="t">
                     <b>SOCIAL</b>
                     <i>MEDIA</i>

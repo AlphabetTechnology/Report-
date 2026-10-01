@@ -33,7 +33,15 @@ Clients and reports are stored in the browser (IndexedDB). Use **Export backup**
 
 Sections with nothing in them are left out, and the contents page renumbers itself.
 
-## Setup
+## Live site (GitHub Pages)
+
+**https://alphabettechnology.github.io/Report-/**
+
+Every push to the main branch rebuilds the site (`.github/workflows/pages.yml`). GitHub Pages has no server, so on this version each person clicks **API key** in the sidebar once and pastes their own Anthropic key. It is kept only in their browser and sent only to Anthropic. Use a key with a monthly spending limit.
+
+If the site doesn't load the first time, open *Settings → Pages* and set the source to the `gh-pages` branch, `/ (root)`.
+
+## Running with a server (optional)
 
 ```bash
 cp .env.example .env.local   # add ANTHROPIC_API_KEY (and optionally APP_PASSWORD)
@@ -41,13 +49,13 @@ npm install
 npm run dev                  # http://localhost:3000
 ```
 
-### Deploying to Vercel
+### Deploying to Vercel instead
 
-Import the repository in Vercel and set `ANTHROPIC_API_KEY` (and `APP_PASSWORD` if you want the AI features behind a team password) under *Settings → Environment Variables*.
+Import the repository in Vercel and set `ANTHROPIC_API_KEY` (and `APP_PASSWORD` if you want the AI features behind a team password) under *Settings → Environment Variables*. Then nobody needs their own key: Claude is called from the server.
 
 ## How it is built
 
 - Next.js (App Router), TypeScript, no database.
-- `src/app/api/analyze`, `write` and `proofread` call Claude (`claude-opus-5-5`) through the Anthropic SDK with structured JSON output.
+- `src/lib/ai/` holds the Claude prompts and schemas (`claude-opus-5-5`, structured JSON output). The `src/app/api/` routes run them on a server; the GitHub Pages build runs them in the browser (`src/lib/api.ts` picks which).
 - `src/components/report/` is the A4 template. `units.tsx` turns a report into blocks, and `ReportDocument.tsx` measures the blocks and packs them into pages, shrinking screenshots slightly when that avoids a mostly empty page.
 - Template images (cover photo, contents photos, platform badges, SWS logo) are in `public/template/`, taken from the approved September 2026 report. Fonts: Poppins (headings), Noto Sans (body), Roboto (thank-you page).

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import DetailsPanel from "@/components/editor/DetailsPanel";
 import ProofreadPanel from "@/components/editor/ProofreadPanel";
@@ -10,6 +10,7 @@ import TextPanel from "@/components/editor/TextPanel";
 import ReportDocument from "@/components/report/ReportDocument";
 import { ClientLogo } from "@/components/ClientForm";
 import Icon, { type IconName } from "@/components/Icon";
+import { askForKey, DIRECT_AI } from "@/lib/api";
 import { formatMonth, formatPeriod, monthName } from "@/lib/format";
 import { reportProgress } from "@/lib/progress";
 import { getReport, listClients, saveReport } from "@/lib/store";
@@ -37,7 +38,7 @@ function Bar({ children }: { children?: React.ReactNode }) {
 const A4_WIDTH_PX = (210 * 96) / 25.4;
 
 export default function ReportEditor() {
-  const { id } = useParams<{ id: string }>();
+  const id = useSearchParams().get("id") ?? "";
   const [report, setReport] = useState<Report | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [missing, setMissing] = useState(false);
@@ -155,6 +156,11 @@ export default function ReportEditor() {
           {saved ? <Icon name="checkCircle" size={15} /> : <span className="spinner" style={{ width: 12, height: 12 }} />}
           {saved ? "Saved" : "Saving"} · {pageCount} pages
         </span>
+        {DIRECT_AI && (
+          <button className="btn ghost icon" title="Anthropic API key" onClick={askForKey}>
+            <Icon name="lock" size={17} />
+          </button>
+        )}
         <button className="btn accent" onClick={downloadPdf}>
           <Icon name="download" size={16} />
           Download PDF

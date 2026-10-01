@@ -8,6 +8,7 @@ import { SECTIONS, type Client, type Report } from "@/lib/types";
 import { Footer, Star, WaveTop } from "./icons";
 import { buildSections, type BuiltSection, type Unit } from "./units";
 import "./report.css";
+import { asset } from "@/lib/asset";
 
 const MM = 96 / 25.4;
 /** Usable height between the top wave and the footer wave. */
@@ -63,21 +64,21 @@ function paginate(sections: BuiltSection[], heights: Record<string, number>): Co
 }
 
 const TOC_IMAGE: Record<string, string> = Object.fromEntries(
-  SECTIONS.map((s, i) => [s.key, `/template/toc/${i + 1}.jpg`]),
+  SECTIONS.map((s, i) => [s.key, asset(`/template/toc/${i + 1}.jpg`)]),
 );
 const TOC_COLOURS = ["c-blue", "c-orange", "c-sky"];
 
 function Cover({ report, client }: { report: Report; client: Client | undefined }) {
   return (
     <section className="rpt-page rpt-cover">
-      <img className="rpt-cover-photo" src="/template/cover/photo.jpg" alt="" />
+      <img className="rpt-cover-photo" src={asset("/template/cover/photo.jpg")} alt="" />
       <div className="rpt-cover-bottom" />
       <div className="rpt-cover-glow" />
       <div className="rpt-cover-fade" />
-      <img className="rpt-float" src="/template/cover/float-app.png" alt="" style={{ left: "176mm", top: "28mm", width: "28mm" }} />
-      <img className="rpt-float" src="/template/cover/float-spark.png" alt="" style={{ left: "171mm", top: "118mm", width: "27mm" }} />
-      <img className="rpt-float" src="/template/cover/float-instagram.png" alt="" style={{ left: "2mm", top: "158mm", width: "30mm" }} />
-      <img className="rpt-float" src="/template/cover/float-youtube.png" alt="" style={{ left: "175mm", top: "212mm", width: "31mm" }} />
+      <img className="rpt-float" src={asset("/template/cover/float-app.png")} alt="" style={{ left: "176mm", top: "28mm", width: "28mm" }} />
+      <img className="rpt-float" src={asset("/template/cover/float-spark.png")} alt="" style={{ left: "171mm", top: "118mm", width: "27mm" }} />
+      <img className="rpt-float" src={asset("/template/cover/float-instagram.png")} alt="" style={{ left: "2mm", top: "158mm", width: "30mm" }} />
+      <img className="rpt-float" src={asset("/template/cover/float-youtube.png")} alt="" style={{ left: "175mm", top: "212mm", width: "31mm" }} />
       <div className="rpt-cover-title">
         <span className="w social" data-text="SOCIAL">SOCIAL</span>
         <span className="w media" data-text="MEDIA">MEDIA</span>
@@ -91,10 +92,10 @@ function Cover({ report, client }: { report: Report; client: Client | undefined 
           <div style={{ fontWeight: 700, fontSize: "15pt", marginTop: "3mm" }}>{client?.name}</div>
         )}
       </div>
-      <img className="rpt-float" src="/template/cover/float-facebook.png" alt="" style={{ left: "94mm", top: "167mm", width: "30mm" }} />
+      <img className="rpt-float" src={asset("/template/cover/float-facebook.png")} alt="" style={{ left: "94mm", top: "167mm", width: "30mm" }} />
       <div className="rpt-prep by">
         <div className="rpt-prep-label">Prepared by</div>
-        <img src="/template/sws-logo.png" alt="SWS Strategic Web Success" />
+        <img src={asset("/template/sws-logo.png")} alt="SWS Strategic Web Success" />
       </div>
       <div className="rpt-cover-info">
         <div>
@@ -156,7 +157,7 @@ function ThankYou() {
       <Star x={118} y={44} size={7} color="#f7941f" />
       <Star x={104} y={52} size={4.5} color="#7aa7d8" />
       <Star x={99} y={56} size={3.6} color="#d9d9d9" />
-      <img className="rpt-thanks-logo" src="/template/sws-logo.png" alt="SWS Strategic Web Success" />
+      <img className="rpt-thanks-logo" src={asset("/template/sws-logo.png")} alt="SWS Strategic Web Success" />
       <div className="rpt-thanks-text">Thank you!</div>
       <Footer url={false} />
     </section>
