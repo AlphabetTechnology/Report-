@@ -3,8 +3,7 @@
 import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Icon from "@/components/Icon";
-import { writeText } from "@/lib/api";
-import { formatMonth, formatPeriod, monthName } from "@/lib/format";
+import { PIPELINE_VERSION, writeReportText } from "@/lib/pipeline";
 import { setAt } from "@/lib/fields";
 import {
   PLATFORM_LABEL,
@@ -83,24 +82,8 @@ export default function TextPanel({
     setBusy(true);
     setError("");
     try {
-      const text = await writeText({
-        client: {
-          name: client?.name ?? "",
-          description: client?.description ?? "",
-          website: client?.website ?? "",
-          english: client?.english ?? "en-GB",
-        },
-        period: formatPeriod(report.periodStart, report.periodEnd, client?.english ?? "en-GB"),
-        month: `${monthName(report.periodStart)} (${formatMonth(report.periodStart)})`,
-        platforms: report.platforms.map((p) => PLATFORM_LABEL[p]),
-        shots: readable.map((s) => ({
-          platform: s.platform,
-          kind: s.kind,
-          section: s.section,
-          extraction: s.extraction,
-        })),
-      });
-      update((r) => ({ ...r, text, suggestions: [], proofreadAt: undefined }));
+      const text = await writeReportText(report, client);
+      update((r) => ({ ...r, text, suggestions: [], proofreadAt: undefined, pipeline: PIPELINE_VERSION }));
     } catch (e) {
       setError(errorMessage(e, "Could not write the text"));
     } finally {

@@ -1,54 +1,54 @@
 
 /**
- * Excerpts from the approved SWS report for Aakaar (September 2026).
- * Claude uses them to match the house tone, length and structure.
+ * Example in the voice we want (plain, specific, written by a person), based on
+ * the Aakaar September 2026 report. Claude copies its approach, not its words.
  */
 export const STYLE_EXAMPLE = `EXECUTIVE SUMMARY
-September maintained Aakaar's social presence across Facebook and Instagram, with the strongest response coming from **child-development education, communication-focused messaging and culturally relevant content.**
+September was a quieter month for Aakaar in reach, but the posts that worked were clear: **simple communication tips for parents** and **festival posts** did far better than everything else.
 
-Facebook generated **296 organic views and 27 content interactions**, while Instagram delivered **1,418 platform views, reached 253 accounts and generated 58 interactions**. Instagram continued to provide the broader content-discovery opportunity, while the existing audience remains strongly concentrated in India.
+On Facebook, **296 views and 27 interactions** came in without any paid promotion. Instagram reached **253 accounts** and drew 1,418 views and 58 interactions, so it remains where most new parents find you. Almost all of your audience is in India, with Navi Mumbai and Mumbai well ahead.
 
 ACCOUNT REACH - Facebook
 Viewers: 149
-Facebook continued reaching users organically throughout September, maintaining visibility around Aakaar's educational and family-focused content.
+149 people saw Aakaar's Facebook posts this month, with a clear spike around **the Ganesh Chaturthi post** in mid-September.
 
 ACCOUNT REACH - Instagram
 Reach: 253
-Instagram continued introducing Aakaar's content to relevant audiences, with educational child-development posts generating consistent visibility.
+Instagram reached 253 accounts. Reach was highest on the days we posted **communication tips for parents**.
 
 ACCOUNT VIEWS - Facebook
 Views: 296 / 3-Second Video Views: 10 / Watch Time: 1m 26s
-Facebook visibility was generated organically, providing a useful foundation for continued content-led audience building.
+All 296 views were organic. Video is still a small part of the picture, with only 10 three-second views, so **short videos are an easy win** for next month.
 
 ENGAGEMENT - Instagram
 Content Interactions: 58
-Instagram generated stronger interaction volume, reinforcing the value of clear, parent-friendly educational content.
+Instagram brought in 58 interactions, about twice Facebook's. Most came from **the two posts on early communication**.
 
-ACCOUNT VISITS - Instagram
-Profile Visits: 35 / New Follows: 4
-Instagram continued generating profile discovery and new audience growth alongside content engagement.
+ACCOUNT VISITS - Facebook
+Page Visits: 86 / New Follows: 0
+86 people visited the Facebook page, but **none of them followed** this month. Clearer calls to action should help turn visits into follows.
 
-AUDIENCE - Facebook
-Lifetime Followers: 1,089 / Gender: Women 60.5%, Men 39.5%
-The Facebook audience is strongest within the 25–44 age range, aligning well with parents and family decision-makers.
-Locations text: Facebook maintains a strongly India-focused audience while also providing visibility among international communities.
+AUDIENCE - Instagram
+Lifetime Followers: 224 / Gender: Women 74.9%, Men 25.1%
+Three in four of your Instagram followers are women, and most are **aged 25–44**, which is exactly the parent audience Aakaar wants to reach.
+Locations text: Navi Mumbai alone accounts for 39.3% of followers, so **local messaging for Navi Mumbai families** is worth doing.
 
 TOP CONTENT - Instagram
 "Communication Starts Before First Words" — 193 views and 5 likes.
 "They Know What They Want to Say..." — 192 views and 4 likes.
 Ganesh Chaturthi Content — 161 views, 12 likes and 2 shares.
-Summary: The strongest Instagram themes combined **practical parent education, communication awareness and culturally relevant moments.**
+Summary: Your two best posts were both **practical tips on early communication**, and the festival post drew the most likes.
 
 FOCUS FOR THE NEXT MONTH
-Expand Parent Education
-Current Situation: Communication-focused content is attracting consistent audience interest.
-Implementation: We will create more simple, parent-friendly developmental guidance.
+Post More Parent Tips
+Current Situation: The two communication tip posts were your most viewed on Instagram, at 193 and 192 views.
+Implementation: We will turn this into **a weekly tip series** for parents of toddlers.
 
-Strengthen Local Visibility
-Current Situation: Navi Mumbai and Mumbai form the core Instagram audience.
-Implementation: We will increase locally relevant messaging around Aakaar's services.
+Turn Visits Into Follows
+Current Situation: Facebook had 86 page visits and no new follows.
+Implementation: We will add **a clear "follow for weekly tips" line** to posts and the page intro.
 
 CONCLUSION
-September maintained Aakaar's visibility across Facebook and Instagram while providing clear insight into the content themes that resonate most strongly with the audience.
+September showed what Aakaar's audience wants: **useful, simple advice for parents**, plus a few well-timed festival posts.
 
-Parent education, communication awareness, child-development guidance and culturally relevant content remain the strongest opportunities. Moving forward, we will build on these themes with more localised content, short-form video, educational storytelling and clearer pathways for parents to learn about Aakaar's services.`;
+Next month we will post a weekly tip, try short videos with your therapists, and make it easier for local parents to get in touch.`;

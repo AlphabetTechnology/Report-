@@ -200,6 +200,8 @@ export interface Report {
   shots: Shot[];
   text: ReportText | null;
   suggestions: Suggestion[];
+  /** Version of the screenshot-reading/writing steps last used (see lib/pipeline.ts). */
+  pipeline?: number;
   /** When the last proofread ran (cleared when the text is rewritten). */
   proofreadAt?: number;
   createdAt: number;

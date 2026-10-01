@@ -1899,3 +1899,78 @@ textarea {
   opacity: 0.4;
   filter: grayscale(1);
 }
+
+/* ---------- update report ---------- */
+
+.upd-steps {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.upd-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.upd-step .dot {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12.5px;
+  background: #eef2f7;
+  color: var(--muted);
+}
+
+.upd-step strong {
+  display: block;
+  font-size: 13.5px;
+}
+
+.upd-step small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.upd-step.run {
+  border-color: #bcd6ee;
+  background: var(--blue-soft);
+}
+
+.upd-step.run .dot {
+  background: #fff;
+  color: var(--blue);
+}
+
+.upd-step.done .dot {
+  background: var(--ok);
+  color: #fff;
+}
+
+.upd-step.err .dot {
+  background: var(--err);
+  color: #fff;
+}
+
+.outdated-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 16px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--orange-soft);
+  color: #7a4300;
+  font-size: 13px;
+  line-height: 1.4;
+}

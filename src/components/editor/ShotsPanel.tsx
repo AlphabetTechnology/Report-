@@ -4,12 +4,10 @@
 import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Icon from "@/components/Icon";
-import { analyzeShot, runPool } from "@/lib/api";
-import { imageForApi, prepareScreenshot } from "@/lib/image";
-import { crop, findCards, type CardLayout } from "@/lib/split";
-import { newId } from "@/lib/store";
+import { runPool } from "@/lib/api";
+import { analyseShot, processImages } from "@/lib/pipeline";
+import { prepareScreenshot } from "@/lib/image";
 import {
-  KIND_SECTION,
   PLATFORM_LABEL,
   PLATFORMS,
   SECTIONS,
@@ -26,8 +24,6 @@ import {
 
 const sectionTitle = (s: ShotSection) => SECTIONS.find((x) => x.key === s)!.title;
 
-/** Orders screenshots inside a section the way the template does (charts before phones, etc). */
-const kindRank = (k: ShotKind) => SHOT_KINDS.indexOf(k) * 1000;
 
 export default function ShotsPanel({
   report,
@@ -45,54 +41,9 @@ export default function ShotsPanel({
   const patchShot = (id: string, patch: Partial<Shot>) =>
     update((r) => ({ ...r, shots: r.shots.map((s) => (s.id === id ? { ...s, ...patch } : s)) }));
 
-  async function analyse(shot: Shot, hint = shot.context) {
-    patchShot(shot.id, { status: "analysing", error: undefined, context: hint });
-    try {
-      const a = await analyzeShot(await imageForApi(shot.dataUrl), shot.fileName, hint);
-      if (a.useful === false && hint) {
-        // A page header or banner cut out of a dashboard: no report data, drop it.
-        update((r) => ({ ...r, shots: r.shots.filter((s) => s.id !== shot.id) }));
-        setRemoved((n) => n + 1);
-        return;
-      }
-      const platform = a.platform === "unknown" ? null : a.platform;
-      update((r) => {
-        const platforms =
-          platform && !r.platforms.includes(platform)
-            ? PLATFORMS.filter((p) => p === platform || r.platforms.includes(p))
-            : r.platforms;
-        return {
-          ...r,
-          platforms,
-          shots: r.shots.map((s) =>
-            s.id === shot.id
-              ? {
-                  ...s,
-                  platform,
-                  kind: a.kind,
-                  section: KIND_SECTION[a.kind],
-                  order: kindRank(a.kind) + (s.order % 1000),
-                  status: "done",
-                  // Never delete a whole upload: if it looks empty or irrelevant, just hide it.
-                  hidden: a.empty === true || a.useful === false,
-                  extraction: {
-                    description: a.description,
-                    metrics: a.metrics,
-                    gender: a.gender,
-                    topAgeRange: a.topAgeRange,
-                    cities: a.cities,
-                    countries: a.countries,
-                    posts: a.posts,
-                  },
-                }
-              : s,
-          ),
-        };
-      });
-    } catch (e) {
-      patchShot(shot.id, { status: "error", error: errorMessage(e, "Failed") });
-    }
-  }
+  const analyse = async (shot: Shot) => {
+    await analyseShot(update, shot);
+  };
 
   async function addFiles(files: File[]) {
     const images = files.filter((f) => f.type.startsWith("image/"));
@@ -102,64 +53,17 @@ export default function ShotsPanel({
     setRemoved(0);
     setBusy(true);
     try {
-      let seq = report.shots.length;
-      const make = (img: { dataUrl: string; width: number; height: number }, fileName: string): Shot => ({
-        id: newId(),
-        dataUrl: img.dataUrl,
-        width: img.width,
-        height: img.height,
-        fileName,
-        platform: null,
-        kind: "other",
-        section: "executive",
-        order: kindRank("other") + (seq++ % 1000),
-        status: "pending",
-      });
-
-      const singles: Shot[] = [];
-      const groups: { full: string; name: string; cards: Shot[] }[] = [];
+      const items = [];
       for (const [i, f] of images.entries()) {
-        const img = await prepareScreenshot(f);
-        const name = f.name || `pasted-${i + 1}.png`;
-        const layout: CardLayout = await findCards(img.dataUrl).catch(() => ({ type: "none" }) as const);
-        if (layout.type === "grid") {
-          // A dashboard with several cards: one image per card, so each goes to its own section.
-          const cards: Shot[] = [];
-          for (const [j, r] of layout.cards.entries()) {
-            cards.push(make(await crop(img.dataUrl, r, 2), `${name} · part ${j + 1}`));
-          }
-          groups.push({ full: img.dataUrl, name, cards });
-        } else if (layout.type === "trim") {
-          singles.push(make(await crop(img.dataUrl, layout.rect, 4), name));
-        } else {
-          singles.push(make(img, name));
-        }
+        items.push({ image: await prepareScreenshot(f), name: f.name || `pasted-${i + 1}.png` });
       }
-      const added = [...singles, ...groups.flatMap((g) => g.cards)];
-      update((r) => ({ ...r, shots: [...r.shots, ...added] }));
-      if (groups.length) {
-        const n = groups.reduce((t, g) => t + g.cards.length, 0);
+      const res = await processImages(update, items, report.shots.length);
+      setRemoved(res.removed);
+      if (res.cutScreenshots) {
         setInfo(
-          `Cut ${groups.length} screenshot${groups.length === 1 ? "" : "s"} into ${n} separate parts so each one goes to its own section.`,
+          `Cut ${res.cutScreenshots} screenshot${res.cutScreenshots === 1 ? "" : "s"} into ${res.cards} separate parts so each one goes to its own section.`,
         );
       }
-
-      await Promise.all([
-        runPool(singles, 3, (s) => analyse(s)),
-        runPool(groups, 1, async (g) => {
-          // Read the whole dashboard once to learn its platform (cards alone often don't show it).
-          let hint = "This image is one card or part cut out of a larger analytics screenshot.";
-          try {
-            const full = await analyzeShot(await imageForApi(g.full), g.name);
-            if (full.platform !== "unknown") {
-              hint += ` The dashboard is for ${PLATFORM_LABEL[full.platform]}, so the platform is "${full.platform}".`;
-            }
-          } catch {
-            /* the cards are still read on their own */
-          }
-          await runPool(g.cards, 3, (c) => analyse(c, hint));
-        }),
-      ]);
     } catch (e) {
       setError(errorMessage(e, "Could not add images"));
     } finally {

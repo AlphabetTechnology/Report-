@@ -3,9 +3,8 @@
 import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Icon from "@/components/Icon";
-import { proofread } from "@/lib/api";
+import { proofreadText } from "@/lib/pipeline";
 import { getAt, listFields, setAt } from "@/lib/fields";
-import { newId } from "@/lib/store";
 import type { Client, Report, Suggestion } from "@/lib/types";
 
 const TYPE_CHIP: Record<Suggestion["type"], string> = {
@@ -45,26 +44,8 @@ export default function ProofreadPanel({
     setBusy(true);
     setError("");
     try {
-      const { suggestions } = await proofread({
-        english,
-        clientName: client?.name ?? "",
-        fields,
-        facts: report.shots
-          .filter((s) => s.extraction)
-          .map((s) => ({ platform: s.platform, section: s.section, metrics: s.extraction!.metrics })),
-      });
-      update((r) => ({
-        ...r,
-        proofreadAt: Date.now(),
-        suggestions: suggestions.map((s) => ({
-          id: newId(),
-          path: s.fieldId,
-          original: s.original,
-          replacement: s.replacement,
-          reason: s.reason,
-          type: s.type,
-        })),
-      }));
+      const suggestions = await proofreadText(report, client);
+      update((r) => ({ ...r, proofreadAt: Date.now(), suggestions }));
       setChecked(true);
     } catch (e) {
       setError(errorMessage(e, "Proofreading failed"));

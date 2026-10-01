@@ -7,6 +7,7 @@ import DetailsPanel from "@/components/editor/DetailsPanel";
 import ProofreadPanel from "@/components/editor/ProofreadPanel";
 import ShotsPanel from "@/components/editor/ShotsPanel";
 import TextPanel from "@/components/editor/TextPanel";
+import UpdateReport, { isOutdated } from "@/components/editor/UpdateReport";
 import ReportDocument from "@/components/report/ReportDocument";
 import { ClientLogo } from "@/components/ClientForm";
 import Icon, { type IconName } from "@/components/Icon";
@@ -50,6 +51,8 @@ export default function ReportEditor() {
   const [zoomOverride, setZoomOverride] = useState<number | null>(null);
   const zoom = zoomOverride ?? fitZoom;
   const dirty = useRef(false);
+  const reportRef = useRef<Report | null>(null);
+  const [updating, setUpdating] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -84,6 +87,10 @@ export default function ReportEditor() {
     setSaved(false);
     setReport((r) => (r ? { ...fn(r), updatedAt: Date.now() } : r));
   }, []);
+
+  useEffect(() => {
+    reportRef.current = report;
+  }, [report]);
 
   // Autosave shortly after each change.
   useEffect(() => {
@@ -172,6 +179,15 @@ export default function ReportEditor() {
           {saved ? <Icon name="checkCircle" size={15} /> : <span className="spinner" style={{ width: 12, height: 12 }} />}
           {saved ? "Saved" : "Saving"} · {pageCount} pages
         </span>
+        <button
+          className="btn ghost"
+          title="Re-read screenshots, rewrite and proofread with the latest version of the tool"
+          disabled={!report.shots.length}
+          onClick={() => setUpdating(true)}
+        >
+          <Icon name="refresh" size={16} />
+          Update report
+        </button>
         <SyncBadge />
         <button className="btn ghost icon" title="Integrations: Claude & Google Drive" onClick={openSettings}>
           <Icon name="link" size={17} />
@@ -201,6 +217,15 @@ export default function ReportEditor() {
               </button>
             ))}
           </nav>
+          {isOutdated(report) && (
+            <div className="outdated-bar">
+              <Icon name="sparkles" size={16} />
+              <span style={{ flex: 1 }}>Made with an older version of the tool. Update to get the latest improvements.</span>
+              <button className="btn small accent" onClick={() => setUpdating(true)}>
+                Update
+              </button>
+            </div>
+          )}
           <div className="side-body">
             {tab === "details" && (
               <DetailsPanel
@@ -251,6 +276,19 @@ export default function ReportEditor() {
           </div>
         </div>
       </div>
+      {updating && (
+        <UpdateReport
+          report={report}
+          latest={() => reportRef.current ?? report}
+          client={client}
+          update={update}
+          onClose={() => setUpdating(false)}
+          onReview={() => {
+            setUpdating(false);
+            setTab("proof");
+          }}
+        />
+      )}
     </>
   );
 }
