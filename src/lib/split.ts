@@ -213,7 +213,60 @@ function plainSurround(
       if (colourDiff(d, i * 4, bg) <= 60) plain++;
     }
   }
-  return inside && plain / inside >= 0.55 ? bg : null;
+  if (!inside || plain / inside < 0.55) return null;
+  // Meta and Instagram put these labels on white, light grey or dark grey/black.
+  // A cream or coloured background means a post design, not a dashboard.
+  const sat = Math.max(...bg) - Math.min(...bg);
+  const lum = (bg[0] + bg[1] + bg[2]) / 3;
+  if (sat > 14 || (lum < 225 && lum > 60)) return null;
+  return bg;
+}
+
+/**
+ * Whether plain (grey or black/white) text sits right beside the label on the
+ * same line: the metric's number ("296 ↓ 99.7%") or "from August" after it.
+ * A red word on a post design has no such neighbour.
+ */
+function hasTextBeside(
+  d: Uint8ClampedArray,
+  W: number,
+  core: Uint8Array,
+  bg: number[],
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+): boolean {
+  const h = y1 - y0 + 1;
+  const reach = Math.round(h * 6);
+  for (const dir of [-1, 1]) {
+    // Average the colour of everything that stands out from the background:
+    // grey or black text averages to grey (even with ClearType's blue/orange
+    // edges), a photo or design averages to a colour.
+    let ink = 0;
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    const from = dir < 0 ? x0 - 1 : x1 + 1;
+    for (let k = 0; k < reach; k++) {
+      const x = from + dir * k;
+      if (x < 0 || x >= W) break;
+      for (let y = y0; y <= y1; y++) {
+        const i = y * W + x;
+        if (core[i]) continue;
+        const p = i * 4;
+        if (colourDiff(d, p, bg) <= 150) continue;
+        ink++;
+        r += d[p];
+        g += d[p + 1];
+        b += d[p + 2];
+      }
+    }
+    if (ink < Math.max(6, h)) continue;
+    const mean = [r / ink, g / ink, b / ink];
+    if (Math.max(...mean) - Math.min(...mean) <= 45) return true;
+  }
+  return false;
 }
 
 export async function eraseChangeLabels(dataUrl: string): Promise<string> {
@@ -357,7 +410,7 @@ export async function eraseChangeLabels(dataUrl: string): Promise<string> {
     // Meta's labels sit on a plain card or screen background. Red inside a
     // photo, a post design or an icon has a busy surround, so leave it alone.
     const bg = plainSurround(d, W, H, core, bx0, by0, bx1, by1);
-    if (!bg) continue;
+    if (!bg || !hasTextBeside(d, W, core, bg, x0, y0, x1, y1)) continue;
     ctx.fillStyle = `rgb(${bg[0]},${bg[1]},${bg[2]})`;
     ctx.fillRect(bx0, by0, bx1 - bx0 + 1, by1 - by0 + 1);
     changed = true;
