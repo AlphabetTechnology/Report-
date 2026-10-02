@@ -70,9 +70,9 @@ export default function DetailsPanel({
           onChange={() => set({ hideChanges: report.hideChanges === false })}
         />
         <div>
-          <div>Hide Meta&apos;s change percentages</div>
+          <div>Hide Meta&apos;s decrease percentages</div>
           <div className="small muted">
-            Removes the red/green “↓ 99.7%” comparison labels from screenshots in the report.
+            Removes the red “↓ 99.7%” labels from screenshots in the report. Green increases stay visible.
           </div>
         </div>
       </label>
