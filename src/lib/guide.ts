@@ -1,4 +1,4 @@
-import type { Platform, ShotKind } from "./types";
+import type { Platform, Report, ShotKind } from "./types";
 
 /** The team's standard: which screenshots to take for each platform, and where. */
 export interface GuideItem {
@@ -88,3 +88,28 @@ export const CAPTURE_RULES = [
 
 /** Desktop screenshots narrower than this print blurry (text is too small). */
 export const MIN_DESKTOP_WIDTH = 1000;
+
+export interface GuideStatus extends GuideItem {
+  platform: Platform;
+  /** Key stored in Report.notAvailable. */
+  key: string;
+  added: boolean;
+  notAvailable: boolean;
+}
+
+/** Every required screenshot for the report's platforms, and whether it's there. */
+export function guideStatus(report: Report): GuideStatus[] {
+  const skipped = new Set(report.notAvailable ?? []);
+  return report.platforms.flatMap((platform) =>
+    PLATFORM_GUIDE[platform].items.map((it) => {
+      const key = `${platform}|${it.label}`;
+      const added = report.shots.some(
+        (s) => s.platform === platform && !s.hidden && s.status === "done" && it.kinds.includes(s.kind),
+      );
+      return { ...it, platform, key, added, notAvailable: !added && skipped.has(key) };
+    }),
+  );
+}
+
+/** Required screenshots still missing (not uploaded and not marked as not available). */
+export const missingShots = (report: Report) => guideStatus(report).filter((g) => !g.added && !g.notAvailable);

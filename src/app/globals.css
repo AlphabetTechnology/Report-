@@ -2113,6 +2113,65 @@ textarea {
   color: #fff;
 }
 
+.guide.missing {
+  border-color: #f5b25c;
+}
+
+.guide-need {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff4e5;
+  color: #8a4b00;
+  font-size: 12.5px;
+}
+
+.guide-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.guide-req,
+.guide-na {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.guide-req {
+  background: #fde6c8;
+  color: #a35400;
+}
+
+.guide-na {
+  background: #eef1f5;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.guide-item.need {
+  color: var(--ink);
+}
+
+.guide-item.need .tick {
+  border-color: #f0a040;
+}
+
+.guide-item.na .tick {
+  border-color: #c8cfda;
+  background: #eef1f5;
+  color: var(--muted);
+}
+
+.guide-skip {
+  flex: none;
+  padding: 2px 8px;
+  font-size: 11.5px;
+}
+
 /* ---------- screenshot viewer ---------- */
 
 .shot-thumb {

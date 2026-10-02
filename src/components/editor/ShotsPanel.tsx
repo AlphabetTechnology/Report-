@@ -198,7 +198,7 @@ export default function ShotsPanel({
         />
       </label>
       <RulesLine />
-      <ShotGuide report={report} />
+      <ShotGuide report={report} update={update} />
 
       {advice.length > 0 && (
         <div className="notice warn" style={{ marginTop: 12 }}>

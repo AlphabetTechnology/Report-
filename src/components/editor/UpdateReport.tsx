@@ -4,7 +4,8 @@ import { useState } from "react";
 import Icon from "@/components/Icon";
 import { errorMessage } from "@/lib/errors";
 import { applyCorrections, PIPELINE_VERSION, proofreadText, reprocessShots, shotsToReread, writeReportText, type Update } from "@/lib/pipeline";
-import type { Client, Report } from "@/lib/types";
+import { missingShots } from "@/lib/guide";
+import { PLATFORM_LABEL, type Client, type Report } from "@/lib/types";
 
 type Step = "shots" | "text" | "proof";
 const STEPS: { key: Step; label: string; detail: string }[] = [
@@ -42,6 +43,13 @@ export default function UpdateReport({
   const [stale] = useState(() => shotsToReread(report).length);
   const total = report.shots.length;
   const done = report.shots.filter((s) => s.status === "done" || s.status === "error").length;
+  const missing = missingShots(report);
+  const missingText = (list: typeof missing) =>
+    `${list.length} required screenshot${list.length === 1 ? " is" : "s are"} missing (${list
+      .map((g) => `${PLATFORM_LABEL[g.platform]}: ${g.label}`)
+      .join("; ")}). Upload ${list.length === 1 ? "it" : "them"} in the Screenshots tab, or mark ${
+      list.length === 1 ? "it" : "them"
+    } Not available there.`;
 
   // Let React apply state updates before reading the report again.
   const settle = () => new Promise((r) => setTimeout(r, 50));
@@ -52,6 +60,9 @@ export default function UpdateReport({
       setStep("shots");
       await reprocessShots(update, latest());
       await settle();
+      // Re-reading can change what a screenshot is taken to be: check again.
+      const still = missingShots(latest());
+      if (still.length) throw new Error(missingText(still));
 
       setStep("text");
       const { text, fixes } = await writeReportText(latest(), client);
@@ -90,6 +101,12 @@ export default function UpdateReport({
           </div>
         </div>
         <div className="modal-body">
+          {step === "idle" && missing.length > 0 && (
+            <div className="notice err">
+              <Icon name="image" size={16} />
+              <span>{missingText(missing)}</span>
+            </div>
+          )}
           {step === "idle" && (
             <div className="notice warn">
               <Icon name="pen" size={16} />
@@ -149,7 +166,7 @@ export default function UpdateReport({
               <button className="btn" onClick={onClose}>
                 Cancel
               </button>
-              <button className="btn accent" onClick={run}>
+              <button className="btn accent" onClick={run} disabled={missing.length > 0}>
                 <Icon name="refresh" size={16} />
                 Update report
               </button>

@@ -5,6 +5,7 @@ import { useState } from "react";
 import Icon from "@/components/Icon";
 import NumberCheck from "./NumberCheck";
 import { shotIssues } from "@/lib/checks";
+import { missingShots } from "@/lib/guide";
 import { applyCorrections, PIPELINE_VERSION, writeReportText } from "@/lib/pipeline";
 import { setAt } from "@/lib/fields";
 import {
@@ -75,6 +76,7 @@ export default function TextPanel({
   const t = report.text;
   const readable = report.shots.filter((s) => s.extraction && !s.hidden);
   const reading = report.shots.some((s) => s.status === "pending" || s.status === "analysing");
+  const missing = reading ? [] : missingShots(report);
 
   const set = (path: string, value: unknown) =>
     update((r) => (r.text ? { ...r, text: setAt(r.text, path, value) } : r));
@@ -112,7 +114,7 @@ export default function TextPanel({
           updates as you type.
         </p>
         <div className="row">
-        <button className={`btn ${t ? "glass" : "accent"}`} disabled={busy || reading || !readable.length} onClick={generate}>
+        <button className={`btn ${t ? "glass" : "accent"}`} disabled={busy || reading || !readable.length || missing.length > 0} onClick={generate}>
           {busy ? (
             <>
               <span className="spinner" /> Writing… (about a minute)
@@ -128,6 +130,24 @@ export default function TextPanel({
         </div>
       </div>
       {error && <div className="notice err">{error}</div>}
+      {missing.length > 0 && readable.length > 0 && (
+        <div className="notice err" style={{ marginTop: 12 }}>
+          <Icon name="image" size={16} />
+          <span>
+            <strong>
+              {missing.length} required screenshot{missing.length === 1 ? " is" : "s are"} missing.
+            </strong>{" "}
+            Upload {missing.length === 1 ? "it" : "them"} in the <b>Screenshots</b> tab before the text is written, or mark{" "}
+            {missing.length === 1 ? "it" : "them"} <b>Not available</b> there if this client doesn&apos;t have{" "}
+            {missing.length === 1 ? "it" : "them"}.
+            {missing.map((g) => (
+              <span key={g.key} style={{ display: "block", marginTop: 3 }}>
+                • {PLATFORM_LABEL[g.platform]}: {g.label}
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
       {shotIssues(report).length > 0 && (
         <div className="notice warn" style={{ marginTop: 12 }}>
           <Icon name="image" size={16} />

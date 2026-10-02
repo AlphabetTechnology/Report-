@@ -16,8 +16,9 @@ import SyncBadge from "@/components/SyncBadge";
 import { formatUsd, SPEND_EVENT } from "@/lib/cost";
 import { formatMonth, formatPeriod, monthName } from "@/lib/format";
 import { reportProgress } from "@/lib/progress";
+import { missingShots } from "@/lib/guide";
 import { DATA_CHANGED, getReport, listClients, saveReport } from "@/lib/store";
-import type { Client, Report } from "@/lib/types";
+import { PLATFORM_LABEL, type Client, type Report } from "@/lib/types";
 
 const TABS: { key: "details" | "shots" | "text" | "proof"; label: string; icon: IconName }[] = [
   { key: "details", label: "Details", icon: "settings" },
@@ -151,6 +152,16 @@ export default function ReportEditor() {
   const client = clients.find((c) => c.id === report.clientId);
 
   function downloadPdf() {
+    const missing = missingShots(report!);
+    if (missing.length) {
+      alert(
+        `This report can't be downloaded yet: ${missing.length} required screenshot${missing.length === 1 ? " is" : "s are"} missing.\n\n` +
+          missing.map((g) => `• ${PLATFORM_LABEL[g.platform]}: ${g.label}`).join("\n") +
+          "\n\nUpload them in the Screenshots tab, or mark one Not available there if this client doesn't have it.",
+      );
+      setTab("shots");
+      return;
+    }
     // The browser's "Save as PDF" uses the page title as the file name,
     // e.g. September_2026_Aakaar_SM_report.
     const original = document.title;
