@@ -167,6 +167,55 @@ export async function crop(dataUrl: string, r: Rect, pad = 0): Promise<{ dataUrl
  * strong red/green are touched, so logos and charts stay as they are.
  * Returns the original data URL when nothing was found.
  */
+const colourDiff = (d: Uint8ClampedArray, p: number, c: number[]) =>
+  Math.abs(d[p] - c[0]) + Math.abs(d[p + 1] - c[1]) + Math.abs(d[p + 2] - c[2]);
+
+/**
+ * The background colour around a box when it is plain (a flat card or screen),
+ * or null when the box sits in a photo, a design or an icon.
+ */
+function plainSurround(
+  d: Uint8ClampedArray,
+  W: number,
+  H: number,
+  core: Uint8Array,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+): number[] | null {
+  // A ring of pixels 2px outside the box.
+  const ring: number[] = [];
+  const add = (x: number, y: number) => {
+    if (x >= 0 && y >= 0 && x < W && y < H && !core[y * W + x]) ring.push((y * W + x) * 4);
+  };
+  for (let x = x0 - 2; x <= x1 + 2; x++) {
+    add(x, y0 - 2);
+    add(x, y1 + 2);
+  }
+  for (let y = y0 - 1; y <= y1 + 1; y++) {
+    add(x0 - 2, y);
+    add(x1 + 2, y);
+  }
+  if (ring.length < 12) return null;
+  const median = (k: number) => ring.map((p) => d[p + k]).sort((a, b) => a - b)[ring.length >> 1];
+  const bg = [median(0), median(1), median(2)];
+  const ringPlain = ring.filter((p) => colourDiff(d, p, bg) <= 40).length / ring.length;
+  if (ringPlain < 0.9) return null;
+  // Inside, apart from the red text and its soft edges, it should be background too.
+  let inside = 0;
+  let plain = 0;
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const i = y * W + x;
+      if (core[i]) continue;
+      inside++;
+      if (colourDiff(d, i * 4, bg) <= 60) plain++;
+    }
+  }
+  return inside && plain / inside >= 0.55 ? bg : null;
+}
+
 export async function eraseChangeLabels(dataUrl: string): Promise<string> {
   const img = await loadImage(dataUrl);
   const W = img.width;
@@ -179,16 +228,14 @@ export async function eraseChangeLabels(dataUrl: string): Promise<string> {
   const image = ctx.getImageData(0, 0, W, H);
   const d = image.data;
 
-  // Strong red or green text pixels.
+  // Strong red text pixels. Only decreases are hidden; green increases stay.
   const core = new Uint8Array(W * H);
   let any = false;
   for (let i = 0, p = 0; i < core.length; i++, p += 4) {
     const r = d[p];
     const g = d[p + 1];
     const b = d[p + 2];
-    const red = r >= 130 && g <= 90 && b <= 100 && r - g >= 80;
-    const green = g >= 100 && r <= 90 && b <= 120 && g - r >= 50 && g - b >= 20;
-    if (red || green) {
+    if (r >= 130 && g <= 90 && b <= 100 && r - g >= 80) {
       core[i] = 1;
       any = true;
     }
@@ -303,13 +350,16 @@ export async function eraseChangeLabels(dataUrl: string): Promise<string> {
       }
     }
     const pad = Math.max(3, Math.round(bh * 0.3));
-    // Paint with the colour just left of the area (the card background).
-    const sx = Math.max(0, x0 - pad - 2);
-    const sy = Math.min(H - 1, Math.round((y0 + y1) / 2));
-    const sp = (sy * W + sx) * 4;
-    const light = d[sp] + d[sp + 1] + d[sp + 2] > 600;
-    ctx.fillStyle = light ? `rgb(${d[sp]},${d[sp + 1]},${d[sp + 2]})` : "#fff";
-    ctx.fillRect(x0 - pad, y0 - pad, x1 - x0 + 1 + pad * 2, y1 - y0 + 1 + pad * 2);
+    const bx0 = Math.max(0, x0 - pad);
+    const by0 = Math.max(0, y0 - pad);
+    const bx1 = Math.min(W - 1, x1 + pad);
+    const by1 = Math.min(H - 1, y1 + pad);
+    // Meta's labels sit on a plain card or screen background. Red inside a
+    // photo, a post design or an icon has a busy surround, so leave it alone.
+    const bg = plainSurround(d, W, H, core, bx0, by0, bx1, by1);
+    if (!bg) continue;
+    ctx.fillStyle = `rgb(${bg[0]},${bg[1]},${bg[2]})`;
+    ctx.fillRect(bx0, by0, bx1 - bx0 + 1, by1 - by0 + 1);
     changed = true;
   }
   return changed ? canvas.toDataURL("image/png") : dataUrl;
