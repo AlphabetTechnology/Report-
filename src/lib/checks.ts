@@ -74,6 +74,9 @@ export interface NumberIssue {
   fieldId: string;
   label: string;
   number: string;
+  /** The words around the number, so the team can see what it refers to. */
+  before: string;
+  after: string;
 }
 
 const NUM = /(?<![\w.])(\d[\d,]*(?:\.\d+)?)(\s?[KkMm](?![a-z]))?(%)?/g;
@@ -136,7 +139,17 @@ export function numberIssues(report: Report): NumberIssue[] {
       // Same digits and unit, or the same value written another way (1.5K = 1,500); a
       // percentage only matches a percentage.
       if (keys.has(n.key) || known.some((k) => k.pct === n.pct && Math.abs(k.value - n.value) < 1e-9)) continue;
-      const issue = { fieldId: f.id, label: f.label, number: m[0].trim() };
+      const end = at + m[0].length;
+      const from = Math.max(0, f.text.lastIndexOf(" ", Math.max(0, at - 50)));
+      const to = f.text.indexOf(" ", Math.min(f.text.length, end + 50));
+      const plain = (t: string) => t.replace(/\*\*/g, "");
+      const issue = {
+        fieldId: f.id,
+        label: f.label,
+        number: m[0].trim(),
+        before: (from > 0 ? "…" : "") + plain(f.text.slice(from, at)).trimStart(),
+        after: plain(f.text.slice(end, to < 0 ? undefined : to)).trimEnd() + (to < 0 ? "" : "…"),
+      };
       if (!confirmed.has(numberKey(issue))) out.push(issue);
     }
   }

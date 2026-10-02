@@ -17,15 +17,18 @@ export default function NumberCheck({ report, update }: { report: Report; update
       <Icon name="eye" size={16} />
       <span>
         <strong>
-          {issues.length} number{issues.length === 1 ? "" : "s"} in the text {issues.length === 1 ? "isn't" : "aren't"} in
-          any screenshot.
+          Please double-check {issues.length === 1 ? "this number" : `these ${issues.length} numbers`}.
         </strong>{" "}
-        Check {issues.length === 1 ? "it" : "them"} before sending; Claude may have worked {issues.length === 1 ? "it" : "them"} out or
-        misread a screenshot.
+        Claude wrote {issues.length === 1 ? "it" : "them"} in the text, but {issues.length === 1 ? "it isn't" : "they aren't"} shown
+        in any screenshot, so {issues.length === 1 ? "it" : "they"} may be worked out or misread. If it&apos;s correct, click
+        It&apos;s right; if not, fix it in the Text tab.
         {issues.map((i, n) => (
-          <span key={n} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-            <span>
-              <b>{i.number}</b> in {i.label}
+          <span key={n} className="numcheck">
+            <span className="numcheck-where">{i.label}</span>
+            <span className="numcheck-quote">
+              {i.before}
+              <mark>{i.number}</mark>
+              {i.after}
             </span>
             <button
               className="btn small ghost"
