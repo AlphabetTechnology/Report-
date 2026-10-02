@@ -54,6 +54,9 @@ function limitsFor(shot: Shot) {
   if (shot.kind === "demographics" || shot.kind === "locations") return { maxW: 176, maxH: 205 };
   if (WIDE_KINDS.has(shot.kind)) return { maxW: 176, maxH: 110 };
   if (shot.kind === "content_overview") return { maxW: 150, maxH: 86 };
+  // A long scrolling capture gets most of a page's height so it stays readable.
+  if (isLongShot(shot)) return { maxW: 118, maxH: 200 };
+  if (isWideShot(shot)) return { maxW: 172, maxH: 70 };
   return { maxW: 118, maxH: 70 };
 }
 
@@ -61,6 +64,12 @@ function limitsFor(shot: Shot) {
 export const HideChangesContext = createContext(true);
 
 const cleaned = new Map<string, Promise<string>>();
+
+/** Keeps a cache to its most recent entries so a long session doesn't hold every image ever shown. */
+function remember<V>(cache: Map<string, V>, key: string, value: V, max = 120) {
+  cache.set(key, value);
+  while (cache.size > max) cache.delete(cache.keys().next().value!);
+}
 
 /** The screenshot with change labels erased (computed once per image). */
 function useCleanImage(shot: Shot): string {
@@ -70,7 +79,7 @@ function useCleanImage(shot: Shot): string {
   useEffect(() => {
     if (!hide || !shot.dataUrl) return;
     let alive = true;
-    if (!cleaned.has(key)) cleaned.set(key, eraseChangeLabels(shot.dataUrl).catch(() => shot.dataUrl));
+    if (!cleaned.has(key)) remember(cleaned, key, eraseChangeLabels(shot.dataUrl).catch(() => shot.dataUrl));
     cleaned.get(key)!.then((url) => alive && setClean({ key, url }));
     return () => {
       alive = false;
@@ -95,7 +104,11 @@ function ShotImg({ shot, w, h }: { shot: Shot; w: number; h: number }) {
  * A whole phone screenshot (tall and narrow), shown in a device frame rather
  * than a flat card. Pieces cut out of a bigger screenshot keep the plain card.
  */
-const isPhoneShot = (s: Shot) => s.width / s.height < 0.7 && !s.context;
+/** Longer than a phone screen: a scrolling capture, shown as a tall plain card. */
+const isLongShot = (s: Shot) => s.width / s.height < 0.38;
+const isPhoneShot = (s: Shot) => s.width / s.height < 0.7 && !isLongShot(s) && !s.context;
+/** A banner-shaped screenshot, too wide to share a row. */
+const isWideShot = (s: Shot) => s.width / s.height > 2.2;
 
 /** Frame thickness around the screen: metal edge + black bezel (mm). */
 const FRAME = 2.8;
@@ -165,7 +178,7 @@ function Card({
   const showBadge = badge && platform;
   return (
     <div className="rpt-card-wrap" style={showBadge ? undefined : { paddingTop: "3mm" }}>
-      <div className="rpt-card" data-grow="card">
+      <div className={`rpt-card${showBadge ? " has-badge" : ""}`} data-grow="card">
         {showBadge && <Badge platform={platform} style3d={badge3d} />}
         {sized.map(({ s, w, h }) => (
           <ShotImg key={s.id} shot={s} w={w} h={h} />
@@ -186,7 +199,8 @@ function useScreenColour(src: string): string {
   useEffect(() => {
     let alive = true;
     if (!screenColours.has(src)) {
-      screenColours.set(
+      remember(
+        screenColours,
         src,
         new Promise<string>((resolve) => {
           const img = new Image();
@@ -304,30 +318,39 @@ function shotUnits(
   const units: Unit[] = [];
   const grids = shots.filter((s) => s.kind === "profile_grid");
   const rest = shots.filter((s) => s.kind !== "profile_grid");
-  // Several small screenshots for the same platform go in rows (2 across, or 3
-  // across for phone screenshots), so 2, 3 or 10 uploads all lay out neatly.
-  const galleryable = rest.length >= 2 && rest.every((s) => !WIDE_KINDS.has(s.kind) && s.kind !== "content_overview");
-  if (galleryable) {
-    // Three across only for full phone screens (shown in device frames); other
-    // tall pieces go two across so their text stays readable.
-    const perRow = rest.every(isPhoneShot) ? 3 : 2;
-    for (let i = 0; i < rest.length; i += perRow) {
-      const row = rest.slice(i, i + perRow);
-      units.push({
-        key: `${keyBase}-row${i}`,
-        shrinkable: true,
-        node: <Card shots={row} platform={platform} badge3d={badge3d} badge={badge && i === 0} />,
-      });
-    }
-  } else {
-    for (const s of rest) {
-      units.push({
-        key: `${keyBase}-${s.id}`,
-        shrinkable: true,
-        node: <Card shots={[s]} platform={platform} badge3d={badge3d} badge={badge} />,
-      });
-    }
+  // Screenshots of one platform are laid out by shape, in the team's order: phone
+  // screens three across in device frames, ordinary cards two across, and wide
+  // banners, long scrolling captures and dashboards each on their own. So 2, 3 or
+  // 10 uploads all lay out neatly whatever mix of shapes they are.
+  const shape = (s: Shot): "phone" | "card" | "single" =>
+    WIDE_KINDS.has(s.kind) || s.kind === "content_overview" || isWideShot(s) || isLongShot(s)
+      ? "single"
+      : isPhoneShot(s)
+        ? "phone"
+        : "card";
+  const perRow = { phone: 3, card: 2, single: 1 };
+  const chunks: { shots: Shot[]; type: "phone" | "card" | "single" }[] = [];
+  for (const s of rest) {
+    const type = shape(s);
+    const last = chunks[chunks.length - 1];
+    if (last && last.type === type && last.shots.length < perRow[type]) last.shots.push(s);
+    else chunks.push({ shots: [s], type });
   }
+  chunks.forEach(({ shots: row, type }, i) => {
+    units.push({
+      key: `${keyBase}-${row[0].id}`,
+      shrinkable: true,
+      // Every card on its own carries the platform badge; in a run of rows, the first.
+      node: (
+        <Card
+          shots={row}
+          platform={platform}
+          badge3d={badge3d}
+          badge={badge && (i === 0 || type === "single" || chunks[i - 1].type !== type)}
+        />
+      ),
+    });
+  });
   for (const s of grids) {
     units.push({
       key: `${keyBase}-${s.id}`,

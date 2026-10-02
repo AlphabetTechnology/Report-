@@ -28,7 +28,7 @@ async function call(url: string, init: RequestInit = {}): Promise<Response> {
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     const msg = body?.error?.message ?? `${res.status} ${res.statusText}`;
-    throw new Error(`Google Drive: ${msg}`);
+    throw Object.assign(new Error(`Google Drive: ${msg}`), { status: res.status });
   }
   return res;
 }
@@ -41,8 +41,10 @@ export async function getFolder(id: string): Promise<DriveFile | null> {
     const f = await res.json();
     return f.trashed || f.mimeType !== FOLDER_MIME ? null : f;
   } catch (e) {
-    if (e instanceof NeedsAuthError) throw e;
-    return null;
+    // Only "not found" means the folder is gone. Any other error (rate limit,
+    // server error) must stop the sync, never send it to a different folder.
+    if ((e as { status?: number }).status === 404) return null;
+    throw e;
   }
 }
 

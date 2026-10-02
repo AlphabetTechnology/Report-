@@ -1,6 +1,6 @@
 "use client";
 
-import { createStore, del, get, set } from "idb-keyval";
+import { clear, createStore, del, get, set } from "idb-keyval";
 import {
   createFolder,
   downloadBlob,
@@ -20,6 +20,8 @@ import {
   DATA_CHANGED,
   deleteClient,
   deleteReport,
+  getClient,
+  getReport,
   listClients,
   listReports,
   listTombstones,
@@ -43,6 +45,8 @@ import { errorMessage } from "@/lib/errors";
 
 const ENABLED_KEY = "sws_drive_enabled";
 const FOLDER_ID_KEY = "sws_drive_folder_id";
+/** Folder the per-item sync records belong to. */
+const META_FOLDER_KEY = "sws_drive_meta_folder";
 const FOLDER_NAME_KEY = "sws_drive_folder_name";
 export const DEFAULT_FOLDER = "SWS Reports";
 const INTERVAL_MS = 60_000;
@@ -155,6 +159,12 @@ async function ensureFolder(): Promise<string> {
     folder = (await findFolder(name)) ?? (await createFolder(name));
   }
   ls.set(FOLDER_ID_KEY, folder.id);
+  // Sync records ("this was on Drive before") only make sense for the folder they
+  // came from. A different folder must not make local reports look deleted.
+  if (ls.get(META_FOLDER_KEY) !== folder.id) {
+    await clear(metaStore());
+    ls.set(META_FOLDER_KEY, folder.id);
+  }
   setStatus({ folderName: folder.name, folderId: folder.id });
   return folder.id;
 }
@@ -264,8 +274,9 @@ async function pass(): Promise<string[]> {
           if (kind === "report" && (await fillMissingImages(L as Report, shotFiles))) changed.push(id);
         }
       } else if (L) {
-        if (M && lu <= M.synced) {
-          // It was synced before and has since been removed from Drive.
+        if (M && lu <= M.synced && files.length > 0) {
+          // It was synced before and has since been removed from Drive. (A completely
+          // empty folder is never trusted for this: it could be a wrong or new folder.)
           await (kind === "client" ? deleteClient(id, { fromSync: true }) : deleteReport(id, { fromSync: true }));
           await del(metaKey(kind, id), metaStore());
           changed.push(id);
@@ -329,9 +340,16 @@ async function push(
   await set(metaKey(kind, item.id), { fileId: newId, synced: Number(updated) } satisfies Meta, metaStore());
 }
 
+/** True when the item was edited in this browser after `seen` was read (keep the edit). */
+async function editedSince(kind: Kind, seen: Client | Report | undefined, id: string): Promise<boolean> {
+  const now = kind === "client" ? await getClient(id) : await getReport(id);
+  return !!now && updatedOf(now) > (seen ? updatedOf(seen) : 0);
+}
+
 async function pull(kind: Kind, r: Remote, local: Client | Report | undefined, shotFiles: Map<string, DriveFile>) {
   if (kind === "client") {
     const c = await downloadJson<Client>(r.file.id);
+    if (await editedSince(kind, local, c.id)) return;
     await saveClient(c, { fromSync: true });
     await set(metaKey(kind, c.id), { fileId: r.file.id, synced: updatedOf(c) } satisfies Meta, metaStore());
     return;
@@ -346,6 +364,8 @@ async function pull(kind: Kind, r: Remote, local: Client | Report | undefined, s
     shots.push({ ...s, dataUrl });
   }
   const merged = { ...remoteReport, shots };
+  // Edited here while the screenshots downloaded: keep the edit; the next pass merges.
+  if (await editedSince(kind, local, merged.id)) return;
   await saveReport(merged, { fromSync: true });
   await set(metaKey(kind, merged.id), { fileId: r.file.id, synced: merged.updatedAt } satisfies Meta, metaStore());
 }
@@ -354,14 +374,12 @@ async function pull(kind: Kind, r: Remote, local: Client | Report | undefined, s
 async function fillMissingImages(r: Report, shotFiles: Map<string, DriveFile>): Promise<boolean> {
   const missing = r.shots.filter((s) => !s.dataUrl && shotFiles.has(s.id));
   if (!missing.length) return false;
-  const shots = await Promise.all(
-    r.shots.map(async (s) =>
-      !s.dataUrl && shotFiles.has(s.id)
-        ? { ...s, dataUrl: await dataUrlFromBlob(await downloadBlob(shotFiles.get(s.id)!.id)) }
-        : s,
-    ),
-  );
-  await saveReport({ ...r, shots }, { fromSync: true });
+  const images = new Map<string, string>();
+  for (const s of missing) images.set(s.id, await dataUrlFromBlob(await downloadBlob(shotFiles.get(s.id)!.id)));
+  // Add the images to the report as it is now, so edits made meanwhile are kept.
+  const current = (await getReport(r.id)) ?? r;
+  const shots = current.shots.map((s) => (!s.dataUrl && images.has(s.id) ? { ...s, dataUrl: images.get(s.id)! } : s));
+  await saveReport({ ...current, shots }, { fromSync: true });
   return true;
 }
 

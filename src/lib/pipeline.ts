@@ -143,6 +143,8 @@ interface Pending {
   platform?: Platform | null;
   /** Shot this image replaces, when re-processing. */
   replaces?: string;
+  /** The team's own choices on the shot being replaced, kept after re-reading. */
+  keep?: { hidden?: boolean; order: number };
 }
 
 /**
@@ -154,6 +156,7 @@ export async function processImages(update: Update, items: Pending[], startOrder
   const singles: Shot[] = [];
   const groups: { full: string; name: string; platform?: Platform | null; cards: Shot[] }[] = [];
   const replacements = new Map<string, Shot[]>();
+  const kept = new Map<string, Pending>();
 
   for (const it of items) {
     const layout: CardLayout = await findCards(it.image.dataUrl).catch(() => ({ type: "none" }) as const);
@@ -169,6 +172,7 @@ export async function processImages(update: Update, items: Pending[], startOrder
       const img = layout.type === "trim" ? await crop(it.image.dataUrl, layout.rect, 4) : it.image;
       const s = newShot(img, it.name, order++);
       singles.push(s);
+      if (it.replaces) kept.set(s.id, it);
       made = [s];
     }
     if (it.replaces) replacements.set(it.replaces, made);
@@ -188,7 +192,27 @@ export async function processImages(update: Update, items: Pending[], startOrder
     if (res === "removed") removed++;
   };
   await Promise.all([
-    runPool(singles, 3, async (s) => count(await analyseShot(update, s))),
+    runPool(singles, 3, async (s) => {
+      const res = await analyseShot(update, s);
+      count(res);
+      // Re-reading must not undo the team's corrections: platform, hidden, order.
+      const k = kept.get(s.id);
+      if (res === "ok" && k) {
+        update((r) => ({
+          ...r,
+          shots: r.shots.map((x) =>
+            x.id === s.id
+              ? {
+                  ...x,
+                  platform: k.platform ?? x.platform,
+                  hidden: k.keep?.hidden ?? x.hidden,
+                  order: k.keep ? kindRank(x.kind) + (k.keep.order % 1000) : x.order,
+                }
+              : x,
+          ),
+        }));
+      }
+    }),
     runPool(groups, 1, async (g) => {
       const platform = g.platform ?? (await dashboardPlatform(g.full));
       await runPool(g.cards, 3, async (c) => count(await analyseShot(update, c, cardHint(platform))));
@@ -214,6 +238,7 @@ export async function reprocessShots(update: Update, report: Report): Promise<Pr
         name: s.fileName,
         platform: s.platform,
         replaces: s.id,
+        keep: { hidden: s.hidden, order: s.order },
       })),
       report.shots.length,
     ),

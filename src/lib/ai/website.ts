@@ -72,6 +72,9 @@ Then return:
     if (err instanceof Anthropic.AuthenticationError) {
       throw new ClaudeError("The Anthropic API key is missing or invalid.", 401);
     }
+    if (err instanceof Anthropic.APIConnectionError) {
+      throw new ClaudeError("Could not reach the Anthropic API. Check your internet connection.", 503);
+    }
     if (err instanceof Anthropic.APIError) {
       throw new ClaudeError(`Anthropic API error ${err.status}: ${err.message}`, 502);
     }

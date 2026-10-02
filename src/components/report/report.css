@@ -147,7 +147,7 @@
 .rpt-card-wrap {
   display: flex;
   justify-content: center;
-  padding-top: 11mm;
+  padding-top: 12mm;
   padding-bottom: 5mm;
 }
 
@@ -162,6 +162,11 @@
   gap: 2.4mm;
 }
 
+/* Leave room under the round platform badge so it never covers the screenshot. */
+.rpt-card.has-badge {
+  padding-top: 7.5mm;
+}
+
 .rpt-card img.rpt-shot {
   display: block;
   border-radius: 1.5mm;
@@ -170,7 +175,7 @@
 
 .rpt-badge {
   position: absolute;
-  top: -10.5mm;
+  top: -11.5mm;
   left: 50%;
   transform: translateX(-50%);
   width: 19mm;
@@ -1016,7 +1021,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding: 12mm 12mm 11mm;
+  padding: 11mm 12mm 8mm;
   border-radius: 6mm;
   background:
     radial-gradient(ellipse 70% 60% at 50% 42%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 70%),

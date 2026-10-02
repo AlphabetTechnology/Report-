@@ -89,11 +89,12 @@ export async function structuredCall<S extends z.ZodType>(
     if (err instanceof Anthropic.BadRequestError) {
       throw new ClaudeError(`Bad request: ${err.message}`, 400);
     }
+    // Connection errors are a kind of APIError, so check them first.
+    if (err instanceof Anthropic.APIConnectionError) {
+      throw new ClaudeError("Could not reach the Anthropic API. Check your internet connection.", 503);
+    }
     if (err instanceof Anthropic.APIError) {
       throw new ClaudeError(`Anthropic API error ${err.status}: ${err.message}`, 502);
-    }
-    if (err instanceof Anthropic.APIConnectionError) {
-      throw new ClaudeError("Could not reach the Anthropic API.", 503);
     }
     throw err;
   }
