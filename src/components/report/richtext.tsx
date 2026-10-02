@@ -19,10 +19,13 @@ const DATE_BEFORE = new RegExp(`${MONTH}\\s?$`); // "September 1"
 export function smartQuotes(s: string): string {
   return s
     .replace(/(\w)'(\w)/g, "$1’$2") // Aakaar's
-    .replace(/(^|[\s(\[—–-])'/g, "$1‘")
+    .replace(/(^|[\s(\[—–*-])'(?=[^\s.,;:!?)])/g, "$1‘")
     .replace(/'/g, "’")
-    .replace(/(^|[\s(\[—–-])"/g, "$1“")
-    .replace(/"/g, "”");
+    // An opening quote can follow a space, a bracket or a **bold** marker.
+    .replace(/(^|[\s(\[—–*-])"(?=[^\s.,;:!?)])/g, "$1“")
+    .replace(/"/g, "”")
+    // Fix a closing quote typed where an opening one belongs (”which → “which).
+    .replace(/(^|[\s(\[—–*-])”(?=[\w‘])/g, "$1“");
 }
 
 function numbers(text: string, keyBase: string): ReactNode[] {

@@ -91,8 +91,11 @@ function ShotImg({ shot, w, h }: { shot: Shot; w: number; h: number }) {
   );
 }
 
-/** A phone screenshot (tall and narrow), shown in a device frame rather than a flat card. */
-const isPhoneShot = (s: Shot) => s.width / s.height < 0.7;
+/**
+ * A whole phone screenshot (tall and narrow), shown in a device frame rather
+ * than a flat card. Pieces cut out of a bigger screenshot keep the plain card.
+ */
+const isPhoneShot = (s: Shot) => s.width / s.height < 0.7 && !s.context;
 
 /** Frame thickness around the screen: metal edge + black bezel (mm). */
 const FRAME = 2.8;
@@ -126,7 +129,7 @@ function PhoneRow({ shots, platform, badge3d, badge }: { shots: Shot[]; platform
   const showBadge = badge && platform;
   return (
     <div className="rpt-card-wrap" style={showBadge ? undefined : { paddingTop: "3mm" }}>
-      <div className="rpt-phones" data-grow style={{ gap: `${gap}mm`, ["--ring" as string]: platform ? PLATFORM_RING[platform] : "#1471b9" }}>
+      <div className="rpt-phones" data-grow="phone" style={{ gap: `${gap}mm`, ["--ring" as string]: platform ? PLATFORM_RING[platform] : "#1471b9" }}>
         <span className="rpt-phones-dots a" />
         <span className="rpt-phones-dots b" />
         {showBadge && <Badge platform={platform} style3d={badge3d} />}
@@ -162,7 +165,7 @@ function Card({
   const showBadge = badge && platform;
   return (
     <div className="rpt-card-wrap" style={showBadge ? undefined : { paddingTop: "3mm" }}>
-      <div className="rpt-card" data-grow>
+      <div className="rpt-card" data-grow="card">
         {showBadge && <Badge platform={platform} style3d={badge3d} />}
         {sized.map(({ s, w, h }) => (
           <ShotImg key={s.id} shot={s} w={w} h={h} />
@@ -248,8 +251,9 @@ function shotUnits(
   // across for phone screenshots), so 2, 3 or 10 uploads all lay out neatly.
   const galleryable = rest.length >= 2 && rest.every((s) => !WIDE_KINDS.has(s.kind) && s.kind !== "content_overview");
   if (galleryable) {
-    const portrait = rest.filter((s) => s.width / s.height < 0.85).length > rest.length / 2;
-    const perRow = portrait ? 3 : 2;
+    // Three across only for full phone screens (shown in device frames); other
+    // tall pieces go two across so their text stays readable.
+    const perRow = rest.every(isPhoneShot) ? 3 : 2;
     for (let i = 0; i < rest.length; i += perRow) {
       const row = rest.slice(i, i + perRow);
       units.push({

@@ -16,8 +16,9 @@ const CONTENT_HEIGHT_MM = 246;
 
 /** Screenshots may shrink to this share of their size to fill a page. */
 const MIN_SHRINK = 0.6;
-/** ...or grow up to this much to use space a page would otherwise leave empty. */
-const MAX_GROW = 1.5;
+/** ...or grow to use space a page would otherwise leave empty: phone mockups
+ * a lot, desktop dashboard cards only a little so they match other pages. */
+const MAX_GROW = { phone: 1.5, card: 1.15 };
 /** Width of the page body, which a grown screenshot must stay inside. */
 const BODY_WIDTH_MM = 180;
 /** Space above a section that starts part-way down a page. */
@@ -42,9 +43,11 @@ interface Measured {
   heights: Record<string, number>;
   /** Width of the growable part (screenshot card or phones) of a unit. */
   widths: Record<string, number>;
+  /** Which kind of growable part a unit has. */
+  kinds: Record<string, "phone" | "card">;
 }
 
-function paginate(sections: BuiltSection[], { heights, widths }: Measured): ContentPage[] {
+function paginate(sections: BuiltSection[], { heights, widths, kinds }: Measured): ContentPage[] {
   const cap = CONTENT_HEIGHT_MM * MM;
   const gap = SECTION_GAP_MM * MM;
   const pages: ContentPage[] = [];
@@ -99,10 +102,10 @@ function paginate(sections: BuiltSection[], { heights, widths }: Measured): Cont
     const growable = page.units.filter((p) => p.scale === 1 && widths[p.unit.key]);
     const growH = growable.reduce((t, p) => t + height(p.unit), 0);
     if (spare < 12 * MM || !growH) continue;
-    const factor = Math.min(MAX_GROW, 1 + (spare * 0.96) / growH);
+    const factor = 1 + (spare * 0.96) / growH;
     for (const p of growable) {
       const byWidth = (BODY_WIDTH_MM * MM) / widths[p.unit.key];
-      p.scale = Math.max(1, Math.min(factor, byWidth));
+      p.scale = Math.max(1, Math.min(factor, byWidth, MAX_GROW[kinds[p.unit.key] ?? "card"]));
     }
   }
   return pages;
@@ -251,15 +254,19 @@ export default function ReportDocument({
     if (!root) return;
     const heights: Record<string, number> = {};
     const widths: Record<string, number> = {};
+    const kinds: Record<string, "phone" | "card"> = {};
     root.querySelectorAll<HTMLElement>("[data-unit]").forEach((el) => {
       heights[el.dataset.unit!] = el.getBoundingClientRect().height;
       const grow = el.querySelector<HTMLElement>("[data-grow]");
-      if (grow) widths[el.dataset.unit!] = grow.getBoundingClientRect().width;
+      if (grow) {
+        widths[el.dataset.unit!] = grow.getBoundingClientRect().width;
+        kinds[el.dataset.unit!] = grow.dataset.grow === "phone" ? "phone" : "card";
+      }
     });
     const same = (a: Record<string, number>, b: Record<string, number>) =>
       Object.keys(a).length === Object.keys(b).length &&
       Object.entries(a).every(([k, v]) => Math.abs((b[k] ?? -1) - v) < 0.5);
-    setMeasured((prev) => (prev && same(heights, prev.heights) && same(widths, prev.widths) ? prev : { heights, widths }));
+    setMeasured((prev) => (prev && same(heights, prev.heights) && same(widths, prev.widths) ? prev : { heights, widths, kinds }));
   }, []);
 
   useLayoutEffect(() => {
