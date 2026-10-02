@@ -262,11 +262,14 @@
   background: #09090b;
 }
 
-.rpt-iphone-bezel img {
-  display: block;
+.rpt-iphone-screen {
   border-radius: 9mm;
-  object-fit: cover;
-  object-position: top;
+  overflow: hidden;
+}
+
+.rpt-iphone-screen img {
+  display: block;
+  width: 100%;
 }
 
 /* Dynamic Island with camera lens */

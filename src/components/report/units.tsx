@@ -175,6 +175,55 @@ function Card({
   );
 }
 
+/** Height ÷ width of a modern phone screen (19.5:9). */
+const PHONE_ASPECT = 19.5 / 9;
+
+const screenColours = new Map<string, Promise<string>>();
+
+/** Background colour of a screenshot, to fill the rest of a phone screen. */
+function useScreenColour(src: string): string {
+  const [colour, setColour] = useState<{ src: string; c: string } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    if (!screenColours.has(src)) {
+      screenColours.set(
+        src,
+        new Promise<string>((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            // The most common colour is the screen's background (white, or black in dark mode).
+            const c = document.createElement("canvas");
+            c.width = 48;
+            c.height = 48;
+            const ctx = c.getContext("2d", { willReadFrequently: true })!;
+            ctx.drawImage(img, 0, 0, 48, 48);
+            const d = ctx.getImageData(0, 0, 48, 48).data;
+            const counts = new Map<number, { n: number; r: number; g: number; b: number }>();
+            for (let i = 0; i < d.length; i += 4) {
+              const key = ((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4);
+              const e = counts.get(key) ?? { n: 0, r: 0, g: 0, b: 0 };
+              e.n++;
+              e.r += d[i];
+              e.g += d[i + 1];
+              e.b += d[i + 2];
+              counts.set(key, e);
+            }
+            const top = [...counts.values()].sort((a, b) => b.n - a.n)[0];
+            resolve(top ? `rgb(${Math.round(top.r / top.n)},${Math.round(top.g / top.n)},${Math.round(top.b / top.n)})` : "#fff");
+          };
+          img.onerror = () => resolve("#fff");
+          img.src = src;
+        }),
+      );
+    }
+    screenColours.get(src)!.then((c) => alive && setColour({ src, c }));
+    return () => {
+      alive = false;
+    };
+  }, [src]);
+  return colour?.src === src ? colour.c : "#fff";
+}
+
 function Phone({
   shot,
   platform,
@@ -186,7 +235,13 @@ function Phone({
   stat: { label: string; value: string } | null;
   period: string;
 }) {
-  const { w, h } = fit(shot, 74, 150);
+  // The phone keeps a real phone shape whatever was uploaded. A short (cropped)
+  // screenshot sits at the top of the screen, the rest in its own background
+  // colour; a long one is cut at the bottom.
+  const w = 64;
+  const h = w * PHONE_ASPECT;
+  const src = useCleanImage(shot);
+  const fill = useScreenColour(src);
   return (
     <div className="rpt-phone-unit">
       <div className="rpt-phone-glow" />
@@ -204,7 +259,9 @@ function Phone({
           <i className="l3" />
           <i className="r1" />
           <div className="rpt-iphone-bezel">
-            <img src={shot.dataUrl} alt={shot.fileName} style={{ width: `${w}mm`, height: `${h}mm` }} />
+            <div className="rpt-iphone-screen" style={{ width: `${w}mm`, height: `${h}mm`, background: fill }}>
+              <img src={src} alt={shot.fileName} />
+            </div>
           </div>
         </div>
         {platform && (
