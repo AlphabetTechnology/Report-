@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import * as z from "zod";
 import type { EnglishVariant } from "@/lib/types";
-import { ClaudeError, MODEL } from "./call";
+import { ClaudeError, MODEL, reportUsage } from "./call";
 
 const WebsiteSchema = z.object({
   businessName: z.string(),
@@ -57,6 +57,7 @@ Then return:
         tools: [{ type: "web_fetch_20260209", name: "web_fetch", max_uses: 4, allowed_domains: [domain] }],
         messages,
       });
+      reportUsage(res.model, res.usage);
       if (res.stop_reason === "pause_turn") {
         messages.push({ role: "assistant", content: res.content as Anthropic.Beta.BetaContentBlockParam[] });
         continue;

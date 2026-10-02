@@ -1,12 +1,13 @@
 "use client";
 
 import Anthropic from "@anthropic-ai/sdk";
-import { analyzeScreenshot, type Analysis } from "./ai/analyze";
-import { MODEL } from "./ai/call";
+import { analyzeScreenshot, identifyPlatform, type Analysis } from "./ai/analyze";
+import { MODEL, onUsage } from "./ai/call";
+import { readingModel, recordUsage } from "./cost";
 import { proofreadReport, type ProofreadRequest, type RawSuggestion } from "./ai/proofread";
 import { describeWebsite, type WebsiteRequest, type WebsiteSummary } from "./ai/website";
 import { writeReport, type WriteRequest } from "./ai/write";
-import type { ReportText } from "./types";
+import type { Platform, ReportText } from "./types";
 
 // The AI code is imported up front (not loaded on demand) so a tab that was open
 // during a site update can still use it.
@@ -16,6 +17,9 @@ import type { ReportText } from "./types";
  * from the browser with each user's own API key, kept in their browser only.
  */
 export const DIRECT_AI = process.env.NEXT_PUBLIC_DIRECT_AI === "1";
+
+// Claude is called from this browser, so every call's token use can be counted here.
+if (DIRECT_AI && typeof window !== "undefined") onUsage(recordUsage);
 
 const KEY_STORAGE = "sws_anthropic_key";
 const VERIFIED_STORAGE = "sws_anthropic_verified";
@@ -118,8 +122,15 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
 }
 
 export async function analyzeShot(dataUrl: string, fileName: string, hint?: string): Promise<Analysis> {
-  if (!DIRECT_AI) return postJson("/api/analyze", { dataUrl, fileName, hint });
-  return direct(async () => analyzeScreenshot(await browserClient(), dataUrl, fileName, hint));
+  const model = readingModel();
+  if (!DIRECT_AI) return postJson("/api/analyze", { dataUrl, fileName, hint, model });
+  return direct(async () => analyzeScreenshot(await browserClient(), dataUrl, fileName, hint, model));
+}
+
+export async function dashboardPlatform(dataUrl: string): Promise<Platform | "unknown"> {
+  const model = readingModel();
+  if (!DIRECT_AI) return (await postJson<{ platform: Platform | "unknown" }>("/api/analyze", { dataUrl, model, mode: "platform" })).platform;
+  return direct(async () => identifyPlatform(await browserClient(), dataUrl, model));
 }
 
 export async function writeText(body: WriteRequest): Promise<ReportText> {

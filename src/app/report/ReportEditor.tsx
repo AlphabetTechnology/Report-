@@ -13,6 +13,7 @@ import { ClientLogo } from "@/components/ClientForm";
 import Icon, { type IconName } from "@/components/Icon";
 import { openSettings } from "@/components/SettingsDialog";
 import SyncBadge from "@/components/SyncBadge";
+import { formatUsd, SPEND_EVENT } from "@/lib/cost";
 import { formatMonth, formatPeriod, monthName } from "@/lib/format";
 import { reportProgress } from "@/lib/progress";
 import { DATA_CHANGED, getReport, listClients, saveReport } from "@/lib/store";
@@ -91,6 +92,16 @@ export default function ReportEditor() {
   useEffect(() => {
     reportRef.current = report;
   }, [report]);
+
+  // Claude calls made while this report is open are its cost.
+  useEffect(() => {
+    const onSpend = (e: Event) => {
+      const usd = (e as CustomEvent<{ usd: number }>).detail?.usd ?? 0;
+      if (usd) update((r) => ({ ...r, aiCost: (r.aiCost ?? 0) + usd }));
+    };
+    window.addEventListener(SPEND_EVENT, onSpend);
+    return () => window.removeEventListener(SPEND_EVENT, onSpend);
+  }, [update]);
 
   // Autosave shortly after each change.
   useEffect(() => {
@@ -178,6 +189,9 @@ export default function ReportEditor() {
         <span className={`save-state${saved ? " ok" : ""}`}>
           {saved ? <Icon name="checkCircle" size={15} /> : <span className="spinner" style={{ width: 12, height: 12 }} />}
           {saved ? "Saved" : "Saving"} · {pageCount} pages
+          {report.aiCost ? (
+            <span title="Claude usage on this report so far (estimated from Anthropic's prices)"> · AI {formatUsd(report.aiCost)}</span>
+          ) : null}
         </span>
         <button
           className="btn ghost"

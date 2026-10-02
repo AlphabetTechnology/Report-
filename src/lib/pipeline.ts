@@ -1,6 +1,6 @@
 "use client";
 
-import { analyzeShot, proofread, runPool, writeText } from "./api";
+import { analyzeShot, dashboardPlatform as askPlatform, proofread, runPool, writeText } from "./api";
 import { errorMessage } from "./errors";
 import { formatMonth, formatPeriod, monthName } from "./format";
 import { listFields } from "./fields";
@@ -29,6 +29,16 @@ import {
  *   5: LinkedIn, Pinterest, Google Business Profile; Activities & Engagement
  */
 export const PIPELINE_VERSION = 5;
+
+/**
+ * Version of the screenshot reading alone. "Update report" only re-reads
+ * screenshots read by an older version (reading costs the most).
+ */
+export const READ_VERSION = 5;
+
+/** Reading version of a shot; shots from before this was tracked count as the report's version. */
+const readVersion = (s: Shot, r: Report) => s.read ?? (s.status === "done" ? (r.pipeline ?? 1) : 0);
+export const shotsToReread = (r: Report) => r.shots.filter((s) => readVersion(s, r) < READ_VERSION);
 
 export type Update = (fn: (r: Report) => Report) => void;
 
@@ -88,6 +98,7 @@ export async function analyseShot(update: Update, shot: Shot, hint = shot.contex
               section: KIND_SECTION[a.kind],
               order: kindRank(a.kind) + (s.order % 1000),
               status: "done",
+              read: READ_VERSION,
               // Never delete a whole upload: if it looks empty or irrelevant, just hide it.
               hidden: a.empty === true || a.useful === false,
               extraction: {
@@ -110,11 +121,11 @@ export async function analyseShot(update: Update, shot: Shot, hint = shot.contex
   }
 }
 
-/** Platform of a whole dashboard, read once so its cut-out cards know it. */
-async function dashboardPlatform(dataUrl: string, name: string): Promise<Platform | null> {
+/** Platform of a whole dashboard, checked once (small image, one-word answer) so its cut-out cards know it. */
+async function dashboardPlatform(dataUrl: string): Promise<Platform | null> {
   try {
-    const full = await analyzeShot(await imageForApi(dataUrl), name);
-    return full.platform === "unknown" ? null : full.platform;
+    const p = await askPlatform(await imageForApi(dataUrl, 1000));
+    return p === "unknown" ? null : p;
   } catch {
     return null;
   }
@@ -180,7 +191,7 @@ export async function processImages(update: Update, items: Pending[], startOrder
   await Promise.all([
     runPool(singles, 3, async (s) => count(await analyseShot(update, s))),
     runPool(groups, 1, async (g) => {
-      const platform = g.platform ?? (await dashboardPlatform(g.full, g.name));
+      const platform = g.platform ?? (await dashboardPlatform(g.full));
       await runPool(g.cards, 3, async (c) => count(await analyseShot(update, c, cardHint(platform))));
     }),
   ]);
@@ -191,10 +202,11 @@ export async function processImages(update: Update, items: Pending[], startOrder
   };
 }
 
-/** Re-runs the latest screenshot reading on everything already in a report. */
+/** Re-runs the latest screenshot reading on screenshots read by an older version. */
 export async function reprocessShots(update: Update, report: Report): Promise<ProcessResult> {
-  const cards = report.shots.filter((s) => s.context);
-  const whole = report.shots.filter((s) => !s.context && s.dataUrl);
+  const stale = shotsToReread(report);
+  const cards = stale.filter((s) => s.context);
+  const whole = stale.filter((s) => !s.context && s.dataUrl);
   const [res] = await Promise.all([
     processImages(
       update,

@@ -1974,3 +1974,24 @@ textarea {
   font-size: 13px;
   line-height: 1.4;
 }
+
+.int-cost {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.int-cost-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.int-cost-row .seg {
+  flex-shrink: 0;
+}
+
+.int-cost svg {
+  vertical-align: -2px;
+}

@@ -1,7 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import * as z from "zod";
 import { PLATFORMS, SHOT_KINDS } from "@/lib/types";
-import { ClaudeError, structuredCall } from "./call";
+import { ClaudeError, structuredCall, type Model } from "./call";
 
 const metric = z.object({ label: z.string(), value: z.string() });
 const named = z.object({ name: z.string(), value: z.string() });
@@ -62,6 +62,13 @@ Never invent numbers. Leave arrays empty and strings "" when something is not vi
 
 export type Analysis = z.infer<typeof AnalysisSchema>;
 
+function imageBlock(dataUrl: string): Anthropic.Beta.BetaImageBlockParam {
+  const match = /^data:(image\/(?:png|jpeg|webp|gif));base64,(.+)$/.exec(dataUrl ?? "");
+  if (!match) throw new ClaudeError("Expected a PNG, JPEG, WebP or GIF image", 400);
+  const mediaType = match[1] as "image/png" | "image/jpeg" | "image/webp" | "image/gif";
+  return { type: "image", source: { type: "base64", media_type: mediaType, data: match[2] } };
+}
+
 /** Reads one screenshot (a data URL) and returns its platform, type and numbers. */
 export async function analyzeScreenshot(
   client: Anthropic,
@@ -69,21 +76,37 @@ export async function analyzeScreenshot(
   fileName?: string,
   /** Extra context, e.g. "This card was cut from a Facebook dashboard for 1–30 September". */
   hint?: string,
+  model?: Model,
 ): Promise<Analysis> {
-  const match = /^data:(image\/(?:png|jpeg|webp|gif));base64,(.+)$/.exec(dataUrl ?? "");
-  if (!match) throw new ClaudeError("Expected a PNG, JPEG, WebP or GIF image", 400);
-  const mediaType = match[1] as "image/png" | "image/jpeg" | "image/webp" | "image/gif";
   return structuredCall(client, {
     schema: AnalysisSchema,
     system: SYSTEM,
-    effort: "medium",
+    // Reading numbers off a screenshot needs little reasoning; low effort keeps it cheap.
+    effort: "low",
     maxTokens: 8000,
+    model,
     content: [
-      { type: "image", source: { type: "base64", media_type: mediaType, data: match[2] } },
+      imageBlock(dataUrl),
       {
         type: "text",
         text: `Analyse this screenshot${fileName ? ` (file name: ${fileName})` : ""}.${hint ? `\n\n${hint}` : ""}`,
       },
     ],
   });
+}
+
+const PlatformSchema = z.object({ platform: z.enum([...PLATFORMS, "unknown"]) });
+
+/** Just names the platform of a whole dashboard (much cheaper than a full read). */
+export async function identifyPlatform(client: Anthropic, dataUrl: string, model?: Model) {
+  const { platform } = await structuredCall(client, {
+    schema: PlatformSchema,
+    system:
+      "You identify which social media or business platform an analytics screenshot is from: facebook, instagram, tiktok, youtube, linkedin, pinterest or gmb (Google Business Profile). Use logos, icons, colours and wording. Answer unknown if you cannot tell.",
+    effort: "low",
+    maxTokens: 2000,
+    model,
+    content: [imageBlock(dataUrl), { type: "text", text: "Which platform is this?" }],
+  });
+  return platform;
 }

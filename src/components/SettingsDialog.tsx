@@ -2,6 +2,7 @@
 
 import { errorMessage } from "@/lib/errors";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { AI_MODE_EVENT, formatUsd, getAiMode, getSpend, setAiMode, SPEND_EVENT, type AiMode, type Spend } from "@/lib/cost";
 import Icon from "@/components/Icon";
 import {
   DIRECT_AI,
@@ -287,7 +288,7 @@ export default function SettingsDialog() {
                     <Icon name="lock" size={14} /> Key <code>{claude.masked}</code>
                   </div>
                   <div>
-                    <Icon name="sparkles" size={14} /> Model: Claude Opus 5.5
+                    <Icon name="sparkles" size={14} /> Writing: Claude Opus 5.5
                   </div>
                   <div>
                     <Icon name="checkCircle" size={14} />{" "}
@@ -352,6 +353,7 @@ export default function SettingsDialog() {
             )}
             {keyError && <div className="int-msg err">{keyError}</div>}
             {keyOk && <div className="int-msg ok">{keyOk}</div>}
+            <CostSettings />
           </section>
 
           {/* ---------------- Google Drive ---------------- */}
@@ -460,6 +462,58 @@ export default function SettingsDialog() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ---------- Cost: which model reads screenshots, and spend so far ---------- */
+
+const subscribeCost = (l: () => void) => {
+  window.addEventListener(AI_MODE_EVENT, l);
+  window.addEventListener(SPEND_EVENT, l);
+  return () => {
+    window.removeEventListener(AI_MODE_EVENT, l);
+    window.removeEventListener(SPEND_EVENT, l);
+  };
+};
+let spendCache: Spend | null = null;
+const readSpend = () => {
+  const s = getSpend();
+  if (!spendCache || spendCache.usd !== s.usd || spendCache.month !== s.month) spendCache = s;
+  return spendCache;
+};
+
+function CostSettings() {
+  const mode = useSyncExternalStore(subscribeCost, getAiMode, () => "best" as AiMode);
+  const spend = useSyncExternalStore(subscribeCost, readSpend, () => null);
+  return (
+    <div className="int-cost">
+      <div className="int-cost-row">
+        <span className="small">
+          <strong>Screenshot reading</strong>
+          <br />
+          <span className="muted">
+            {mode === "economy"
+              ? "Claude Sonnet 5.5: about half the cost. Report text is still written by Opus."
+              : "Claude Opus 5.5: most accurate, highest cost."}
+          </span>
+        </span>
+        <div className="seg">
+          <button className={mode === "best" ? "on" : ""} onClick={() => setAiMode("best")}>
+            Best
+          </button>
+          <button className={mode === "economy" ? "on" : ""} onClick={() => setAiMode("economy")}>
+            Economy
+          </button>
+        </div>
+      </div>
+      {DIRECT_AI && spend && (
+        <p className="small muted" style={{ margin: "8px 0 0" }}>
+          <Icon name="clock" size={13} /> This browser has used about <strong>{formatUsd(spend.usd)}</strong> of Claude
+          this month ({spend.calls} {spend.calls === 1 ? "call" : "calls"}). Each report shows its own cost next to the page
+          count.
+        </p>
+      )}
     </div>
   );
 }

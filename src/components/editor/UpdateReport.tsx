@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Icon from "@/components/Icon";
 import { errorMessage } from "@/lib/errors";
-import { PIPELINE_VERSION, proofreadText, reprocessShots, writeReportText, type Update } from "@/lib/pipeline";
+import { PIPELINE_VERSION, proofreadText, reprocessShots, shotsToReread, writeReportText, type Update } from "@/lib/pipeline";
 import type { Client, Report } from "@/lib/types";
 
 type Step = "shots" | "text" | "proof";
@@ -38,6 +38,8 @@ export default function UpdateReport({
   const [step, setStep] = useState<Step | "idle" | "done">("idle");
   const [error, setError] = useState("");
   const [suggestions, setSuggestions] = useState(0);
+  // Screenshots already read by the current version are kept (re-reading is the costly part).
+  const [stale] = useState(() => shotsToReread(report).length);
   const total = report.shots.length;
   const done = report.shots.filter((s) => s.status === "done" || s.status === "error").length;
 
@@ -111,7 +113,11 @@ export default function UpdateReport({
                   <div>
                     <strong>{s.label}</strong>
                     <small>
-                      {s.key === "shots" && state === "run" && total ? `${done} of ${total} done` : s.detail}
+                      {s.key === "shots" && !stale
+                        ? "Already up to date, skipped"
+                        : s.key === "shots" && state === "run" && total
+                          ? `${done} of ${total} done`
+                          : s.detail}
                     </small>
                   </div>
                 </div>

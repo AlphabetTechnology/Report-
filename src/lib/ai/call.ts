@@ -3,6 +3,27 @@ import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import type * as z from "zod";
 
 export const MODEL = "claude-opus-5-5";
+/** Half the price of Opus; used for reading screenshots when the team picks "Economy". */
+export const ECONOMY_MODEL = "claude-sonnet-5-5";
+export const MODELS = [MODEL, ECONOMY_MODEL] as const;
+export type Model = (typeof MODELS)[number];
+export const isModel = (m: unknown): m is Model => MODELS.includes(m as Model);
+
+/** Token counts from one call, reported so the app can show what it spent. */
+export interface Usage {
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_input_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+}
+let usageListener: ((u: Usage) => void) | null = null;
+export function onUsage(fn: ((u: Usage) => void) | null) {
+  usageListener = fn;
+}
+export function reportUsage(model: string, u: Omit<Usage, "model"> | undefined) {
+  if (u) usageListener?.({ ...u, model });
+}
 
 
 export class ClaudeError extends Error {
@@ -28,11 +49,12 @@ export async function structuredCall<S extends z.ZodType>(
   content: Content;
   effort: "low" | "medium" | "high";
   maxTokens?: number;
+  model?: Model;
   },
 ): Promise<z.infer<S>> {
   try {
     const res = await client.beta.messages.parse({
-      model: MODEL,
+      model: opts.model ?? MODEL,
       max_tokens: opts.maxTokens ?? 16000,
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
@@ -40,9 +62,12 @@ export async function structuredCall<S extends z.ZodType>(
         effort: opts.effort,
         format: betaZodOutputFormat(opts.schema),
       },
-      system: opts.system,
+      // The instructions are the same on every call of a kind, so they are cached
+      // (later calls pay a tenth of the price for them).
+      system: [{ type: "text", text: opts.system, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: opts.content }],
     });
+    reportUsage(res.model, res.usage);
     if (res.stop_reason === "refusal") {
       throw new ClaudeError("Claude declined this request.", 422);
     }

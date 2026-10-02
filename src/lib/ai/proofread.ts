@@ -57,7 +57,7 @@ export async function proofreadReport(client: Anthropic, body: ProofreadRequest)
   const result = await structuredCall(client, {
     schema: ProofreadSchema,
     system: systemPrompt(body.english, body.clientName),
-    effort: "medium",
+    effort: "low",
     maxTokens: 16000,
     content: `<fields>\n${JSON.stringify(fields, null, 1)}\n</fields>\n\n<screenshot_data>\n${JSON.stringify(body.facts)}\n</screenshot_data>\n\nProofread every field.`,
   });

@@ -135,6 +135,8 @@ export interface Shot {
   hidden?: boolean;
   /** Extra context for Claude, e.g. which dashboard a cut-out card came from. */
   context?: string;
+  /** Version of the screenshot reading that produced `extraction` (see lib/pipeline.ts). */
+  read?: number;
   error?: string;
   extraction?: Extraction;
 }
@@ -224,6 +226,8 @@ export interface Report {
   hideChanges?: boolean;
   /** When the last proofread ran (cleared when the text is rewritten). */
   proofreadAt?: number;
+  /** Claude spend on this report so far, in US dollars (counted in the browser). */
+  aiCost?: number;
   createdAt: number;
   updatedAt: number;
 }
