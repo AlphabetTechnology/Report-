@@ -6,7 +6,7 @@ import { MODEL, onUsage } from "./ai/call";
 import { readingModel, recordUsage } from "./cost";
 import { proofreadReport, type ProofreadRequest, type RawSuggestion } from "./ai/proofread";
 import { describeWebsite, type WebsiteRequest, type WebsiteSummary } from "./ai/website";
-import { writeReport, type WriteRequest } from "./ai/write";
+import { writeReport, type PlatformFix, type WriteRequest } from "./ai/write";
 import type { Platform, ReportText } from "./types";
 
 // The AI code is imported up front (not loaded on demand) so a tab that was open
@@ -133,7 +133,7 @@ export async function dashboardPlatform(dataUrl: string): Promise<Platform | "un
   return direct(async () => identifyPlatform(await browserClient(), dataUrl, model));
 }
 
-export async function writeText(body: WriteRequest): Promise<ReportText> {
+export async function writeText(body: WriteRequest): Promise<ReportText & { platformFixes?: PlatformFix[] }> {
   if (!DIRECT_AI) return postJson("/api/write", body);
   return direct(async () => writeReport(await browserClient(), body));
 }

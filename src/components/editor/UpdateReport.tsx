@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Icon from "@/components/Icon";
 import { errorMessage } from "@/lib/errors";
-import { PIPELINE_VERSION, proofreadText, reprocessShots, shotsToReread, writeReportText, type Update } from "@/lib/pipeline";
+import { applyCorrections, PIPELINE_VERSION, proofreadText, reprocessShots, shotsToReread, writeReportText, type Update } from "@/lib/pipeline";
 import type { Client, Report } from "@/lib/types";
 
 type Step = "shots" | "text" | "proof";
@@ -54,8 +54,14 @@ export default function UpdateReport({
       await settle();
 
       setStep("text");
-      const text = await writeReportText(latest(), client);
-      update((r) => ({ ...r, text, suggestions: [], proofreadAt: undefined, pipeline: PIPELINE_VERSION }));
+      const { text, fixes } = await writeReportText(latest(), client);
+      update((r) => ({
+        ...applyCorrections(r, fixes),
+        text,
+        suggestions: [],
+        proofreadAt: undefined,
+        pipeline: PIPELINE_VERSION,
+      }));
       await settle();
 
       setStep("proof");

@@ -374,7 +374,9 @@ export async function eraseChangeLabels(dataUrl: string): Promise<string> {
         if (d[p] > 150 && d[p + 2] > 150 && d[p + 1] < 70) n++;
       }
     }
-    return n >= 3;
+    // A logo has a patch of magenta; a few tinted edge pixels on blurry, low-res
+    // text don't count.
+    return n >= Math.max(3, b.n * 0.2);
   };
   // A label is a short, wide run of thin text strokes. Logos (e.g. Instagram's
   // gradient icon) are solid blocks of colour, so they fail the density test.

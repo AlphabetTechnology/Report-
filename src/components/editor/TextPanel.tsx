@@ -3,7 +3,7 @@
 import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Icon from "@/components/Icon";
-import { PIPELINE_VERSION, writeReportText } from "@/lib/pipeline";
+import { applyCorrections, PIPELINE_VERSION, writeReportText } from "@/lib/pipeline";
 import { setAt } from "@/lib/fields";
 import {
   PLATFORM_LABEL,
@@ -82,8 +82,14 @@ export default function TextPanel({
     setBusy(true);
     setError("");
     try {
-      const text = await writeReportText(report, client);
-      update((r) => ({ ...r, text, suggestions: [], proofreadAt: undefined, pipeline: PIPELINE_VERSION }));
+      const { text, fixes } = await writeReportText(report, client);
+      update((r) => ({
+        ...applyCorrections(r, fixes),
+        text,
+        suggestions: [],
+        proofreadAt: undefined,
+        pipeline: PIPELINE_VERSION,
+      }));
     } catch (e) {
       setError(errorMessage(e, "Could not write the text"));
     } finally {

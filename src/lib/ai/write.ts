@@ -43,7 +43,10 @@ const WriteSchema = z.object({
     z.object({ title: z.string(), situation: z.string(), implementation: z.string() }),
   ),
   conclusion: z.string(),
+  platformFixes: z.array(z.object({ screenshot: z.number().int(), platform })),
 });
+
+export type PlatformFix = z.infer<typeof WriteSchema>["platformFixes"][number];
 
 export interface WriteRequest {
   client: { name: string; description: string; website?: string; english: "en-GB" | "en-US" };
@@ -91,6 +94,7 @@ What to produce:
 - focus: 5 or 6 recommendations for next month, grounded in the data. title: 2–5 words, Title Case, starting with a verb (e.g. "Expand Parent Education"). situation: one sentence on what the data shows. implementation: one sentence starting with "We will".
 - activities: work the agency did this month, from screenshots of kind "activity" (posts published, replies to comments and messages, review replies, Google Business posts, community engagement). summary: one or two sentences in the "we" voice. items: 3–8 short bullet points, each one specific with a count where the data has one (e.g. "Published 12 posts and 4 stories on Instagram", "Replied to every review on Google within 24 hours"). If there are no activity screenshots, return an empty summary and no items.
 - conclusion: two short paragraphs separated by a blank line.
+- platformFixes: each screenshot's platform was tagged by an automatic reader, which can mix up Facebook and Instagram on Meta Business Suite pages because they look the same. If the numbers clearly show a screenshot belongs to another platform (for example its follower count, reach or top posts match that platform's figures elsewhere, and two screenshots of the same kind are both tagged with one platform), list {screenshot: its index, platform: the right one}, and write the text for the corrected platform. Leave the list empty when the tags look right, which is most of the time.
 
 Platform-specific labels: LinkedIn — Impressions, Unique Visitors, Page Views, Reactions, Comments, Reposts, New Followers; Pinterest — Impressions, Engagements, Saves, Outbound Clicks, Monthly Views; Google Business Profile — Profile Views, Searches, Calls, Website Clicks, Directions Requests (call it "Google Business Profile", not GMB).
 
@@ -104,7 +108,10 @@ ${STYLE_EXAMPLE}
 }
 
 /** Writes all the report text from the numbers read off the screenshots. */
-export async function writeReport(client: Anthropic, body: WriteRequest): Promise<ReportText> {
+export async function writeReport(
+  client: Anthropic,
+  body: WriteRequest,
+): Promise<ReportText & { platformFixes: PlatformFix[] }> {
   const data = {
     client: body.client.name,
     aboutClient: body.client.description || "(no description given)",
@@ -113,8 +120,8 @@ export async function writeReport(client: Anthropic, body: WriteRequest): Promis
     month: body.month,
     platforms: body.platforms,
     screenshots: body.shots
-      .filter((s) => s.extraction)
-      .map((s) => ({ platform: s.platform, kind: s.kind, section: s.section, data: s.extraction })),
+      .map((s, index) => ({ index, platform: s.platform, kind: s.kind, section: s.section, data: s.extraction }))
+      .filter((s) => s.data),
   };
   return structuredCall(client, {
     schema: WriteSchema,

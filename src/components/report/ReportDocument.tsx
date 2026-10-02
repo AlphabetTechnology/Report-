@@ -19,6 +19,8 @@ const MIN_SHRINK = 0.6;
 /** ...or grow to use space a page would otherwise leave empty: phone mockups
  * a lot, desktop dashboard cards only a little so they match other pages. */
 const MAX_GROW = { phone: 1.5, card: 1.15 };
+/** A small card may grow further, up to this width (a wide card still only 1.15x). */
+const CARD_GROW_WIDTH_MM = 130;
 /** Width of the page body, which a grown screenshot must stay inside. */
 const BODY_WIDTH_MM = 180;
 /** Space above a section that starts part-way down a page. */
@@ -105,7 +107,12 @@ function paginate(sections: BuiltSection[], { heights, widths, kinds }: Measured
     const factor = 1 + (spare * 0.96) / growH;
     for (const p of growable) {
       const byWidth = (BODY_WIDTH_MM * MM) / widths[p.unit.key];
-      p.scale = Math.max(1, Math.min(factor, byWidth, MAX_GROW[kinds[p.unit.key] ?? "card"]));
+      const kind = kinds[p.unit.key] ?? "card";
+      const cap =
+        kind === "phone"
+          ? MAX_GROW.phone
+          : Math.min(MAX_GROW.phone, Math.max(MAX_GROW.card, (CARD_GROW_WIDTH_MM * MM) / widths[p.unit.key]));
+      p.scale = Math.max(1, Math.min(factor, byWidth, cap));
     }
   }
   return pages;

@@ -224,10 +224,29 @@ export async function reprocessShots(update: Update, report: Report): Promise<Pr
   return res;
 }
 
-/** Asks Claude to write all the report text. */
-export async function writeReportText(report: Report, client: Client | undefined): Promise<ReportText> {
+/** A screenshot Claude found was tagged with the wrong platform while writing. */
+export interface PlatformCorrection {
+  id: string;
+  platform: Platform;
+}
+
+/** Moves screenshots Claude found under the wrong platform (e.g. Instagram audience tagged Facebook). */
+export function applyCorrections(r: Report, fixes: PlatformCorrection[]): Report {
+  if (!fixes.length) return r;
+  const byId = new Map(fixes.map((f) => [f.id, f.platform]));
+  const shots = r.shots.map((s) => (byId.has(s.id) ? { ...s, platform: byId.get(s.id)! } : s));
+  const used = new Set([...r.platforms, ...fixes.map((f) => f.platform)]);
+  return { ...r, shots, platforms: PLATFORMS.filter((p) => used.has(p)) };
+}
+
+/** Asks Claude to write all the report text (and to spot screenshots under the wrong platform). */
+export async function writeReportText(
+  report: Report,
+  client: Client | undefined,
+): Promise<{ text: ReportText; fixes: PlatformCorrection[] }> {
   const english = client?.english ?? "en-GB";
-  return writeText({
+  const shots = report.shots.filter((s) => s.extraction && !s.hidden);
+  const { platformFixes = [], ...text } = await writeText({
     client: {
       name: client?.name ?? "",
       description: client?.description ?? "",
@@ -237,10 +256,12 @@ export async function writeReportText(report: Report, client: Client | undefined
     period: formatPeriod(report.periodStart, report.periodEnd, english),
     month: `${monthName(report.periodStart)} (${formatMonth(report.periodStart)})`,
     platforms: report.platforms.map((p) => PLATFORM_LABEL[p]),
-    shots: report.shots
-      .filter((s) => s.extraction && !s.hidden)
-      .map((s) => ({ platform: s.platform, kind: s.kind, section: s.section, extraction: s.extraction })),
+    shots: shots.map((s) => ({ platform: s.platform, kind: s.kind, section: s.section, extraction: s.extraction })),
   });
+  const fixes = platformFixes
+    .filter((f) => shots[f.screenshot] && shots[f.screenshot].platform !== f.platform)
+    .map((f) => ({ id: shots[f.screenshot].id, platform: f.platform }));
+  return { text, fixes };
 }
 
 /** Proofreads the report text; returns suggestions to review. */
