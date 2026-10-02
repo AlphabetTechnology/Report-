@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element -- local data URLs */
 
 import { errorMessage } from "@/lib/errors";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Icon from "@/components/Icon";
 import { runPool } from "@/lib/api";
 import { analyseShot, processImages } from "@/lib/pipeline";
@@ -10,6 +10,8 @@ import { prepareScreenshot } from "@/lib/image";
 import { checkFileSize, checkResolution, getRules, setRules, type UploadRules } from "@/lib/upload-rules";
 import { MIN_DESKTOP_WIDTH } from "@/lib/guide";
 import ShotGuide from "./ShotGuide";
+import ShotViewer from "./ShotViewer";
+import { shotIssues } from "@/lib/checks";
 import {
   PLATFORM_LABEL,
   PLATFORMS,
@@ -42,6 +44,8 @@ export default function ShotsPanel({
   const [removed, setRemoved] = useState(0);
   const [rejected, setRejected] = useState<{ name: string; reason: string }[]>([]);
   const [advice, setAdvice] = useState<string[]>([]);
+  // The screenshot open in the viewer, by id (editing it may move it in the list).
+  const [viewingId, setViewingId] = useState<string | null>(null);
 
   const patchShot = (id: string, patch: Partial<Shot>) =>
     update((r) => ({ ...r, shots: r.shots.map((s) => (s.id === id ? { ...s, ...patch } : s)) }));
@@ -129,6 +133,28 @@ export default function ShotsPanel({
       ),
     }));
   }
+
+  // Screenshots in the order the panel lists them (section, platform, order), for the viewer.
+  const ordered = useMemo(
+    () =>
+      SHOT_SECTIONS.flatMap((section) =>
+        report.shots
+          .filter((s) => s.section === section)
+          .sort(
+            (a, b) =>
+              (a.platform ? PLATFORMS.indexOf(a.platform) : 9) - (b.platform ? PLATFORMS.indexOf(b.platform) : 9) ||
+              a.order - b.order,
+          ),
+      ),
+    [report.shots],
+  );
+  const issues = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const i of shotIssues(report)) m.set(i.shotId, [...(m.get(i.shotId) ?? []), i.message]);
+    return m;
+  }, [report]);
+  const open = (s: Shot) => setViewingId(s.id);
+  const viewing = viewingId ? ordered.findIndex((x) => x.id === viewingId) : -1;
 
   const pending = report.shots.filter((s) => s.status === "pending" || s.status === "analysing").length;
   const failed = report.shots.filter((s) => s.status === "error");
@@ -238,11 +264,34 @@ export default function ShotsPanel({
         </div>
       )}
 
+      {issues.size > 0 && (
+        <div className="notice warn" style={{ marginTop: 12 }}>
+          <Icon name="eye" size={16} />
+          <span>
+            <strong>
+              {issues.size} screenshot{issues.size === 1 ? " needs" : "s need"} a look
+            </strong>{" "}
+            (marked <b>Check</b> below). Click a screenshot to see it full size with what Claude read.
+          </span>
+        </div>
+      )}
+
       {report.shots.length > 0 && (
         <p className="small muted" style={{ marginTop: 12 }}>
           Check each screenshot is in the right place. Change the platform, section or type if Claude got it wrong; the
           preview updates straight away.
         </p>
+      )}
+
+      {viewing >= 0 && (
+        <ShotViewer
+          shots={ordered}
+          index={viewing}
+          issues={issues}
+          onIndex={(i) => setViewingId(ordered[i]?.id ?? null)}
+          onClose={() => setViewingId(null)}
+          onPatch={patchShot}
+        />
       )}
 
       {SHOT_SECTIONS.map((section) => {
@@ -261,9 +310,9 @@ export default function ShotsPanel({
             </div>
             {inSection.map((s) => (
               <div className={`shot${s.hidden ? " dim" : ""}`} key={s.id}>
-                <a href={s.dataUrl} target="_blank" rel="noreferrer" title="Open full size">
+                <button className="shot-thumb" onClick={() => open(s)} title="See full size">
                   <img src={s.dataUrl} alt="" />
-                </a>
+                </button>
                 <div style={{ minWidth: 0 }}>
                   <div className="meta">
                     {s.status === "analysing" || s.status === "pending" ? (
@@ -283,6 +332,11 @@ export default function ShotsPanel({
                     ) : (
                       <span className="chip orange">Platform?</span>
                     )}
+                    {issues.has(s.id) && (
+                      <button className="chip orange chip-btn" onClick={() => open(s)} title={issues.get(s.id)!.join("\n")}>
+                        Check
+                      </button>
+                    )}
                     <span className="name" title={s.extraction?.description ?? s.fileName}>
                       {s.extraction?.description ?? s.fileName}
                     </span>
@@ -291,7 +345,7 @@ export default function ShotsPanel({
                     <select
                       className="select"
                       value={s.platform ?? ""}
-                      onChange={(e) => patchShot(s.id, { platform: (e.target.value || null) as Platform | null })}
+                      onChange={(e) => patchShot(s.id, { platform: (e.target.value || null) as Platform | null, platformSure: true })}
                     >
                       <option value="">No platform</option>
                       {PLATFORMS.map((p) => (

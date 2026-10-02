@@ -79,7 +79,7 @@ Write the way a good account manager at the agency writes to a client they know:
 - Don't stack three adjectives or list things in threes by habit. Don't start several sentences with the platform name. Don't end sentences with "-ing" phrases that add commentary ("…, indicating growing interest").
 - No hype, no emojis, no exclamation marks, no rhetorical questions.
 
-Use only the numbers provided in the screenshot data. Never invent, estimate or round numbers differently. If a number is not provided, leave it out rather than guessing. Do not compare with previous months unless the data includes previous figures.
+Use only the numbers provided in the screenshot data. Never invent, estimate, calculate or round numbers differently. When a screenshot's periodStart/periodEnd are given and don't overlap the reporting period (a screenshot from another month), don't use its numbers; lifetime ranges that include the month are fine. If a number is not provided, leave it out rather than guessing. Do not compare with previous months unless the data includes previous figures.
 
 Formatting (the report must not read as a wall of plain text):
 - In EVERY paragraph (executive summary, each block text, audience texts, top content summaries, focus situation and implementation, conclusion), wrap the 1–2 most important phrases in **double asterisks** so they print in bold: the content themes that worked, the key finding, or the action. Bold short phrases (2–8 words), never whole sentences, never more than two per paragraph.

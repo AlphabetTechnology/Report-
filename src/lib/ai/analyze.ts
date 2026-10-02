@@ -8,6 +8,7 @@ const named = z.object({ name: z.string(), value: z.string() });
 
 const AnalysisSchema = z.object({
   platform: z.enum([...PLATFORMS, "unknown"]),
+  platformSure: z.boolean(),
   kind: z.enum(SHOT_KINDS),
   useful: z.boolean(),
   empty: z.boolean(),
@@ -15,6 +16,8 @@ const AnalysisSchema = z.object({
   metrics: z.array(metric),
   gender: z.array(metric),
   topAgeRange: z.string(),
+  periodStart: z.string(),
+  periodEnd: z.string(),
   cities: z.array(named),
   countries: z.array(named),
   posts: z.array(
@@ -33,6 +36,7 @@ const SYSTEM = `You read screenshots of social media analytics dashboards for a 
 
 For the screenshot, decide:
 - platform: the platform the data belongs to (facebook, instagram, tiktok, youtube, linkedin, pinterest, gmb). Meta Business Suite shows the selected account in a switcher at the top ("Facebook ▾" or "Instagram ▾"): when it is visible it decides the platform, even if the page looks the same for both. Otherwise use the Facebook or Instagram icon next to the card title or in the breakdown. Google Business Profile ("Business Profile", "Performance", calls, directions, website clicks, "Searches", Google Maps/Search) is "gmb". A screenshot of a profile in a phone app belongs to that app. Use "unknown" only if there is really no clue.
+- platformSure: true when something in the image shows the platform (the Meta switcher, a logo or icon, the app or site itself); false when you had to guess.
 - kind, which decides where it goes in the report:
   - content_overview: a summary card with several headline numbers (views, reach, interactions, watch time) and usually a chart
   - reach: a single "Reach", "Viewers", "Unique viewers", "Impressions", "Unique visitors" or Google "Profile views"/"People viewed your Business Profile" card or chart
@@ -53,6 +57,7 @@ For the screenshot, decide:
 - metrics: every headline number exactly as shown, with a clear label in Title Case, e.g. {"label":"Views","value":"296"}, {"label":"Watch Time","value":"1m 26s"}. Copy numbers exactly; keep "1.5K" as "1.5K" unless the exact figure is also shown, in which case prefer the exact figure. Do not include chart axis values.
 - gender: e.g. [{"label":"Women","value":"60.5%"},{"label":"Men","value":"39.5%"}] when shown, otherwise [].
 - topAgeRange: the age range(s) with the largest bars, e.g. "25–44", otherwise "".
+- periodStart / periodEnd: the date range the screenshot shows (date picker, "Last 30 days" with dates, "Lifetime: 2 Sep 2023 – 1 Oct 2026"), as YYYY-MM-DD. Use "" when no dates are visible; never guess them.
 - cities / countries: every row shown, name shortened to the city or country (e.g. "Mumbai", not "Mumbai, Maharashtra, India"), value as shown with % sign.
 - posts: for top content, each post with its caption start as title, date, and the view/like/comment/share numbers ("" when not shown).
 

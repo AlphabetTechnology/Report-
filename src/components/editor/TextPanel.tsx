@@ -3,6 +3,8 @@
 import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Icon from "@/components/Icon";
+import NumberCheck from "./NumberCheck";
+import { shotIssues } from "@/lib/checks";
 import { applyCorrections, PIPELINE_VERSION, writeReportText } from "@/lib/pipeline";
 import { setAt } from "@/lib/fields";
 import {
@@ -126,6 +128,16 @@ export default function TextPanel({
         </div>
       </div>
       {error && <div className="notice err">{error}</div>}
+      {shotIssues(report).length > 0 && (
+        <div className="notice warn" style={{ marginTop: 12 }}>
+          <Icon name="image" size={16} />
+          <span>
+            Some screenshots need a look first (wrong month, unsure platform or a possible mix-up). Check them in the{" "}
+            <b>Screenshots</b> tab, marked <b>Check</b>, so the text is written from the right numbers.
+          </span>
+        </div>
+      )}
+      <NumberCheck report={report} update={update} />
 
       {t && (
         <>

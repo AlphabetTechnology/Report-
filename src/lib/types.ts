@@ -118,6 +118,9 @@ export interface Extraction {
   cities: NamedValue[];
   countries: NamedValue[];
   posts: PostStat[];
+  /** Date range visible in the screenshot (YYYY-MM-DD), "" or missing when none is shown. */
+  periodStart?: string;
+  periodEnd?: string;
 }
 
 export interface Shot {
@@ -135,6 +138,10 @@ export interface Shot {
   hidden?: boolean;
   /** Extra context for Claude, e.g. which dashboard a cut-out card came from. */
   context?: string;
+  /** False when Claude had to guess the platform. */
+  platformSure?: boolean;
+  /** The team looked at this screenshot's warnings and confirmed it is right. */
+  checked?: boolean;
   /** Fingerprint of the uploaded file, to spot the same screenshot uploaded twice. */
   source?: string;
   /** Already a phone mockup (screenshot inside a drawn phone): shown as it is, never re-framed. */
@@ -230,6 +237,8 @@ export interface Report {
   hideChanges?: boolean;
   /** When the last proofread ran (cleared when the text is rewritten). */
   proofreadAt?: number;
+  /** Numbers flagged by the number check that the team confirmed are right ("fieldId|number"). */
+  checkedNumbers?: string[];
   /** Claude spend on this report so far, in US dollars (counted in the browser). */
   aiCost?: number;
   createdAt: number;

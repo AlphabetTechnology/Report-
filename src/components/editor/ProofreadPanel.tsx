@@ -3,6 +3,8 @@
 import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Icon from "@/components/Icon";
+import { numberIssues, shotIssues } from "@/lib/checks";
+import NumberCheck from "./NumberCheck";
 import { proofreadText } from "@/lib/pipeline";
 import { getAt, listFields, setAt } from "@/lib/fields";
 import type { Client, Report, Suggestion } from "@/lib/types";
@@ -107,7 +109,17 @@ export default function ProofreadPanel({
       </div>
       </div>
       {error && <div className="notice err">{error}</div>}
-      {checked && !busy && report.suggestions.length === 0 && (
+      <NumberCheck report={report} update={update} />
+      {checked && !busy && report.suggestions.length > 0 ? null : checked && !busy && shotIssues(report).length > 0 && (
+        <div className="notice warn">
+          <Icon name="image" size={16} />
+          <span>
+            Grammar and wording are fine. Some screenshots still need a look in the <b>Screenshots</b> tab (marked{" "}
+            <b>Check</b>) before this is ready to send.
+          </span>
+        </div>
+      )}
+      {checked && !busy && report.suggestions.length === 0 && !numberIssues(report).length && !shotIssues(report).length && (
         <div className="notice" style={{ background: "var(--ok-soft)", color: "#0b6b3e" }}>
           <Icon name="checkCircle" size={16} />
           No issues left. The report is ready to send.

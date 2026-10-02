@@ -34,7 +34,7 @@ export const PIPELINE_VERSION = 5;
  * Version of the screenshot reading alone. "Update report" only re-reads
  * screenshots read by an older version (reading costs the most).
  */
-export const READ_VERSION = 5;
+export const READ_VERSION = 6; // 6: date range shown and platform confidence
 
 /** Screenshots read before versions were saved (no `read`) are always re-read once. */
 export const shotsToReread = (r: Report) => r.shots.filter((s) => (s.read ?? 0) < READ_VERSION);
@@ -98,6 +98,10 @@ export async function analyseShot(update: Update, shot: Shot, hint = shot.contex
               order: kindRank(a.kind) + (s.order % 1000),
               status: "done",
               read: READ_VERSION,
+              // A fresh reading needs a fresh look.
+              checked: undefined,
+              // A card cut from a dashboard whose platform was read from the whole image is sure.
+              platformSure: a.platformSure || (!!platform && !!hint && hint.includes(`platform is "${platform}"`)),
               // Never delete a whole upload: if it looks empty or irrelevant, just hide it.
               hidden: a.empty === true || a.useful === false,
               extraction: {
@@ -108,6 +112,8 @@ export async function analyseShot(update: Update, shot: Shot, hint = shot.contex
                 cities: a.cities,
                 countries: a.countries,
                 posts: a.posts,
+                periodStart: a.periodStart,
+                periodEnd: a.periodEnd,
               },
             }
           : s,

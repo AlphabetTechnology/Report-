@@ -2112,3 +2112,165 @@ textarea {
   background: #12a150;
   color: #fff;
 }
+
+/* ---------- screenshot viewer ---------- */
+
+.shot-thumb {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.chip-btn {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.viewer-back {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(10, 18, 32, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.viewer {
+  display: flex;
+  width: min(1400px, 100%);
+  height: min(900px, 100%);
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+}
+
+.viewer-img {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef1f6;
+  padding: 24px 64px;
+}
+
+/* Small cut-out cards are enlarged to fill the viewer so they're easy to read. */
+.viewer-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 18px rgba(15, 30, 60, 0.16));
+}
+
+.viewer-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 30, 60, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.viewer-nav:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.viewer-nav.left {
+  left: 14px;
+}
+
+.viewer-nav.right {
+  right: 14px;
+}
+
+.viewer-side {
+  width: 340px;
+  flex: none;
+  overflow-y: auto;
+  padding: 16px 18px 20px;
+  border-left: 1px solid var(--line);
+}
+
+.viewer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.viewer-side h3 {
+  margin: 6px 0 2px;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewer-side .field {
+  margin-bottom: 8px;
+}
+
+.viewer-read {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-2);
+}
+
+.viewer-h {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.viewer-sub {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 10px 0 2px;
+}
+
+.kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--line-2);
+}
+
+.kv span {
+  color: var(--muted);
+  min-width: 0;
+}
+
+.kv b {
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .viewer {
+    flex-direction: column;
+  }
+
+  .viewer-side {
+    width: auto;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    max-height: 45%;
+  }
+}

@@ -554,7 +554,7 @@ export default function Home() {
                   Screenshots in, <em>client-ready report</em> out.
                 </h1>
                 <p>
-                  Drop in the month&apos;s Facebook, Instagram, TikTok and YouTube screenshots. Claude sorts them, writes
+                  Drop in the month&apos;s screenshots from Facebook, Instagram, LinkedIn, TikTok, YouTube and more. Claude sorts them, writes
                   the commentary and proofreads it, all in the SWS template.
                 </p>
                 <div className="row">
