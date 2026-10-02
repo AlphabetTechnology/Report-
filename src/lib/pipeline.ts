@@ -36,9 +36,8 @@ export const PIPELINE_VERSION = 5;
  */
 export const READ_VERSION = 5;
 
-/** Reading version of a shot; shots from before this was tracked count as the report's version. */
-const readVersion = (s: Shot, r: Report) => s.read ?? (s.status === "done" ? (r.pipeline ?? 1) : 0);
-export const shotsToReread = (r: Report) => r.shots.filter((s) => readVersion(s, r) < READ_VERSION);
+/** Screenshots read before versions were saved (no `read`) are always re-read once. */
+export const shotsToReread = (r: Report) => r.shots.filter((s) => (s.read ?? 0) < READ_VERSION);
 
 export type Update = (fn: (r: Report) => Report) => void;
 

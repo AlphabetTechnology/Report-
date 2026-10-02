@@ -63,7 +63,7 @@ export async function structuredCall<S extends z.ZodType>(
         format: betaZodOutputFormat(opts.schema),
       },
       // The instructions are the same on every call of a kind, so they are cached
-      // (later calls pay a tenth of the price for them).
+      // (later calls pay a small fraction of the price for them).
       system: [{ type: "text", text: opts.system, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: opts.content }],
     });
