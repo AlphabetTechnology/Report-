@@ -5,7 +5,7 @@ import { errorMessage } from "./errors";
 import { formatMonth, formatPeriod, monthName } from "./format";
 import { listFields } from "./fields";
 import { imageForApi } from "./image";
-import { crop, findCards, hasDeviceFrame, type CardLayout } from "./split";
+import { contentBox, crop, findCards, hasDeviceFrame, type CardLayout } from "./split";
 import { newId } from "./store";
 import {
   KIND_SECTION,
@@ -134,6 +134,8 @@ export interface ProcessResult {
   cutScreenshots: number;
   cards: number;
   removed: number;
+  /** Uploads that were already phone mockups (shown as they are). */
+  framed: string[];
 }
 
 interface Pending {
@@ -163,6 +165,7 @@ export async function processImages(update: Update, items: Pending[], startOrder
   // Trimmed screenshots: the platform read from the full image (the trim can cut
   // off Meta's "Facebook ▾ / Instagram ▾" switcher at the top).
   const trimmed = new Map<string, string>();
+  const framedNames: string[] = [];
   for (const it of items) {
     const framed = await hasDeviceFrame(it.image.dataUrl).catch(() => false);
     const layout: CardLayout = framed
@@ -177,8 +180,16 @@ export async function processImages(update: Update, items: Pending[], startOrder
       groups.push({ full: it.image.dataUrl, name: it.name, platform: it.platform, cards });
       made = cards;
     } else {
-      const img = layout.type === "trim" ? await crop(it.image.dataUrl, layout.rect, 4) : it.image;
+      // A ready-made mockup is cropped to the phone, so its plain background doesn't show as a box.
+      const box = framed ? await contentBox(it.image.dataUrl).catch(() => null) : null;
+      const img =
+        layout.type === "trim"
+          ? await crop(it.image.dataUrl, layout.rect, 4)
+          : box
+            ? await crop(it.image.dataUrl, box, 0)
+            : it.image;
       const s = { ...newShot(img, it.name, order++), source: it.source, ...(framed ? { framed: true } : {}) };
+      if (framed) framedNames.push(it.name);
       singles.push(s);
       if (it.replaces) kept.set(s.id, it);
       if (layout.type === "trim") trimmed.set(s.id, it.image.dataUrl);
@@ -235,6 +246,7 @@ export async function processImages(update: Update, items: Pending[], startOrder
     cutScreenshots: groups.length,
     cards: groups.reduce((t, g) => t + g.cards.length, 0),
     removed,
+    framed: framedNames,
   };
 }
 

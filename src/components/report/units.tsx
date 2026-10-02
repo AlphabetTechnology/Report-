@@ -4,6 +4,7 @@ import { eraseChangeLabels } from "@/lib/split";
 import {
   PLATFORM_LABEL,
   SECTIONS,
+  type Metric,
   type Platform,
   type Report,
   type SectionKey,
@@ -100,59 +101,12 @@ function ShotImg({ shot, w, h }: { shot: Shot; w: number; h: number }) {
   );
 }
 
-/**
- * A whole phone screenshot (tall and narrow), shown in a device frame rather
- * than a flat card. Pieces cut out of a bigger screenshot keep the plain card.
- */
 /** Longer than a phone screen: a scrolling capture, shown as a tall plain card. */
 const isLongShot = (s: Shot) => s.width / s.height < 0.38;
+/** A whole phone screenshot (tall and narrow); pieces cut from a bigger screenshot are not. */
 const isPhoneShot = (s: Shot) => s.width / s.height < 0.7 && !isLongShot(s) && !s.context && !s.framed;
 /** A banner-shaped screenshot, too wide to share a row. */
 const isWideShot = (s: Shot) => s.width / s.height > 2.2;
-
-/** Frame thickness around the screen: metal edge + black bezel (mm). */
-const FRAME = 2.8;
-
-function Device({ shot, w, h }: { shot: Shot; w: number; h: number }) {
-  const src = useCleanImage(shot);
-  const radius = Math.min(9, w * 0.12);
-  return (
-    <div className="rpt-device-stage">
-      <div className="rpt-device" style={{ borderRadius: `${radius + FRAME}mm` }}>
-        <i className="b1" style={{ top: `${h * 0.16}mm` }} />
-        <i className="b2" style={{ top: `${h * 0.26}mm` }} />
-        <i className="b3" style={{ top: `${h * 0.22}mm` }} />
-        <div className="rpt-device-bezel" style={{ borderRadius: `${radius + FRAME - 0.8}mm` }}>
-          <img src={src} alt={shot.fileName} style={{ width: `${w}mm`, height: `${h}mm`, borderRadius: `${radius}mm` }} />
-          <span className="rpt-device-glare" style={{ borderRadius: `${radius}mm` }} />
-        </div>
-      </div>
-      <div className="rpt-device-shadow" />
-    </div>
-  );
-}
-
-/** One to three phone screenshots standing on a soft branded backdrop. */
-function PhoneRow({ shots, platform, badge3d, badge }: { shots: Shot[]; platform: Platform | null; badge3d: boolean; badge: boolean }) {
-  const n = shots.length;
-  const gap = n > 2 ? 9 : 14;
-  const colW = (150 - (n - 1) * gap) / n - FRAME * 2;
-  const maxH = n === 1 ? 150 : n === 2 ? 128 : 108;
-  const sized = shots.map((s) => ({ s, ...fit(s, colW, maxH) }));
-  const showBadge = badge && platform;
-  return (
-    <div className="rpt-card-wrap" style={showBadge ? undefined : { paddingTop: "3mm" }}>
-      <div className="rpt-phones" data-grow="phone" style={{ gap: `${gap}mm`, ["--ring" as string]: platform ? PLATFORM_RING[platform] : "#1471b9" }}>
-        <span className="rpt-phones-dots a" />
-        <span className="rpt-phones-dots b" />
-        {showBadge && <Badge platform={platform} style3d={badge3d} />}
-        {sized.map(({ s, w, h }) => (
-          <Device key={s.id} shot={s} w={w} h={h} />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function Card({
   shots,
@@ -169,15 +123,12 @@ function Card({
     const { w, h } = fit(shots[0], 110, 165);
     return (
       <div className="rpt-card-wrap" style={badge && platform ? undefined : { paddingTop: "3mm" }}>
-        <div className="rpt-framed" data-grow="phone">
+        <div className="rpt-framed" data-grow="phone" style={{ ["--corner" as string]: `${w * 0.12}mm` }}>
           {badge && platform && <Badge platform={platform} style3d={badge3d} />}
           <ShotImg shot={shots[0]} w={w} h={h} />
         </div>
       </div>
     );
-  }
-  if (shots.length <= 3 && shots.every(isPhoneShot)) {
-    return <PhoneRow shots={shots} platform={platform} badge3d={badge3d} badge={badge} />;
   }
   const n = shots.length;
   const portrait = shots.every((s) => s.width / s.height < 0.85);
@@ -198,6 +149,8 @@ function Card({
     </div>
   );
 }
+
+/* ---------- phone screenshots: the SWS brand panel ---------- */
 
 /** Height ÷ width of a modern phone screen (19.5:9). */
 const PHONE_ASPECT = 19.5 / 9;
@@ -249,72 +202,114 @@ function useScreenColour(src: string): string {
   return colour?.src === src ? colour.c : "#fff";
 }
 
-function Phone({
-  shot,
-  platform,
-  stat,
-  period,
-}: {
-  shot: Shot;
-  platform: Platform | null;
-  stat: { label: string; value: string } | null;
-  period: string;
-}) {
-  // The phone keeps a real phone shape whatever was uploaded. A short (cropped)
-  // screenshot sits at the top of the screen, the rest in its own background
-  // colour; a long one is cut at the bottom.
-  const w = 64;
-  const h = w * PHONE_ASPECT;
+/**
+ * A realistic phone. It always has a real phone shape: a short (cropped)
+ * screenshot sits at the top of the screen, the rest in its own background
+ * colour; a long one is cut at the bottom.
+ */
+function PhoneFrame({ shot, w }: { shot: Shot; w: number }) {
   const src = useCleanImage(shot);
   const fill = useScreenColour(src);
+  const r = w * 0.19;
   return (
-    <div className="rpt-phone-unit">
-      <div className="rpt-phone-glow" />
-      <div className="rpt-phone-ring" style={{ width: "118mm", height: "118mm" }} />
-      <div className="rpt-phone-ring" style={{ width: "158mm", height: "158mm" }} />
-      <div className="rpt-phone-accent" style={{ right: "18mm", bottom: "8mm" }} />
-      <div className="rpt-phone-accent" style={{ left: "22mm", top: "6mm", opacity: 0.6 }} />
-      <div className="rpt-phone-dots" style={{ right: "6mm", top: "14mm" }} />
-      <div className="rpt-phone-dots" style={{ left: "8mm", bottom: "18mm" }} />
-      <div className="rpt-phone-stage">
-        <div className="rpt-phone-shadow" />
-        <div className="rpt-iphone">
-          <i className="l1" />
-          <i className="l2" />
-          <i className="l3" />
-          <i className="r1" />
-          <div className="rpt-iphone-bezel">
-            <div className="rpt-iphone-screen" style={{ width: `${w}mm`, height: `${h}mm`, background: fill }}>
-              <img src={src} alt={shot.fileName} />
-            </div>
-          </div>
+    <div className="rpt-pphone" style={{ borderRadius: `${r}mm` }}>
+      <i className="b1" />
+      <i className="b2" />
+      <i className="b3" />
+      <div className="bez" style={{ borderRadius: `${r - 0.7}mm` }}>
+        <div className="scr" style={{ width: `${w}mm`, height: `${w * PHONE_ASPECT}mm`, background: fill, borderRadius: `${r - 2.3}mm` }}>
+          <img src={src} alt={shot.fileName} />
         </div>
-        {platform && (
-          <div className="rpt-phone-badge" style={{ borderColor: PLATFORM_RING[platform] }}>
-            <PlatformIcon platform={platform} />
-          </div>
-        )}
-        {platform && stat && (
-          <div className="rpt-stat-card">
-            <div className="lbl">
-              <span>
-                <PlatformIcon platform={platform} />
-              </span>
-              {PLATFORM_LABEL[platform]} {stat.label}
-            </div>
-            <div className="val">{stat.value}</div>
-            <div className="bar" />
-            {period && <div className="sub">{period}</div>}
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-interface PhoneInfo {
-  stat: { label: string; value: string } | null;
+interface PanelInfo {
+  headline: Metric | null;
+  tiles: Metric[];
   period: string;
+}
+
+/** The numbers shown beside a phone: the section's main figure, then the platform's headline figures. */
+function panelInfo(report: Report, p: Platform | null, period: string, section?: string): PanelInfo {
+  const blocks = (report.text?.blocks ?? []).filter((b) => b.platform === p);
+  const own = blocks.filter((b) => b.section === section).flatMap((b) => b.metrics);
+  const seen = new Set<string>();
+  const all = [...own, ...blocks.flatMap((b) => b.metrics)].filter((m) => {
+    const k = m.label.toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  const want = [/^views$|platform views|^views/i, /reach|viewers|impressions/i, /interaction|engagement/i, /visit/i, /follow/i];
+  const headline = own[0] ?? all.find((m) => want[0].test(m.label)) ?? all[0] ?? null;
+  const tiles: Metric[] = [];
+  for (const rx of want) {
+    const m = all.find((x) => rx.test(x.label) && x !== headline && !tiles.includes(x));
+    if (m) tiles.push(m);
+  }
+  for (const m of all) if (tiles.length < 4 && m !== headline && !tiles.includes(m)) tiles.push(m);
+  return { headline, tiles: tiles.slice(0, 4), period };
+}
+
+/**
+ * One to three phone screenshots on the SWS-blue panel. In the summary and the
+ * number sections the month's figures sit beside them; elsewhere (top content,
+ * activities, audience) just the platform name, so figures aren't repeated.
+ */
+function PhonePanel({ shots, platform, info }: { shots: Shot[]; platform: Platform | null; info: PanelInfo | null }) {
+  const n = shots.length;
+  const hasStats = !!info?.headline;
+  const stacked = n >= 3 || !hasStats;
+  const w = stacked ? (n >= 3 ? 37 : n === 2 ? 44 : 50) : n === 2 ? 38 : 50;
+  return (
+    <div className="rpt-ppanel-wrap">
+      <div className={`rpt-ppanel${stacked ? " stacked" : ""}${n === 2 ? " two" : ""}`} data-grow="card">
+        <div className="phones">
+          {shots.map((s) => (
+            <PhoneFrame key={s.id} shot={s} w={w} />
+          ))}
+        </div>
+        {hasStats ? (
+          <div className="side">
+            <div className="head">
+              <div className="k">
+                {platform && (
+                  <span className="ic">
+                    <PlatformIcon platform={platform} />
+                  </span>
+                )}
+                {platform ? `${PLATFORM_LABEL[platform]} ` : ""}
+                {info!.headline!.label}
+              </div>
+              <div className="v">{info!.headline!.value}</div>
+              {info!.period && <div className="note">{info!.period}</div>}
+            </div>
+            {info!.tiles.length > 0 && (
+              <div className="tiles">
+                {info!.tiles.map((t, i) => (
+                  <div className="tile" key={i}>
+                    <b>{t.value}</b>
+                    <span>{t.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          platform && (
+            <div className="plain">
+              <span className="ic">
+                <PlatformIcon platform={platform} />
+              </span>
+              {PLATFORM_LABEL[platform]}
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
 }
 
 /** Turns the screenshots of one platform in one section into units. */
@@ -323,32 +318,40 @@ function shotUnits(
   shots: Shot[],
   platform: Platform | null,
   badge3d: boolean,
-  phone: PhoneInfo | null,
+  panel: PanelInfo | null,
   badge = true,
 ): Unit[] {
   const units: Unit[] = [];
-  // An image that already has a phone frame is never put in another phone.
-  const grids = shots.filter((s) => s.kind === "profile_grid" && !s.framed);
-  const rest = shots.filter((s) => s.kind !== "profile_grid" || s.framed);
   // Screenshots of one platform are laid out by shape, in the team's order: phone
-  // screens three across in device frames, ordinary cards two across, and wide
-  // banners, long scrolling captures and dashboards each on their own. So 2, 3 or
-  // 10 uploads all lay out neatly whatever mix of shapes they are.
+  // screens (and profile grids) up to three on the SWS phone panel, ordinary cards
+  // two across, and wide banners, long scrolling captures, dashboards and
+  // ready-made mockups each on their own. So 2, 3 or 10 uploads all lay out neatly.
+  // A phone screenshot always goes on the phone panel, whatever kind of data it shows.
   const shape = (s: Shot): "phone" | "card" | "single" =>
-    s.framed || WIDE_KINDS.has(s.kind) || s.kind === "content_overview" || isWideShot(s) || isLongShot(s)
+    s.framed
       ? "single"
-      : isPhoneShot(s)
+      : isPhoneShot(s) || (s.kind === "profile_grid" && !s.context)
         ? "phone"
-        : "card";
+        : WIDE_KINDS.has(s.kind) || s.kind === "content_overview" || isWideShot(s) || isLongShot(s)
+          ? "single"
+          : "card";
   const perRow = { phone: 3, card: 2, single: 1 };
   const chunks: { shots: Shot[]; type: "phone" | "card" | "single" }[] = [];
-  for (const s of rest) {
+  for (const s of shots) {
     const type = shape(s);
     const last = chunks[chunks.length - 1];
     if (last && last.type === type && last.shots.length < perRow[type]) last.shots.push(s);
     else chunks.push({ shots: [s], type });
   }
+  let statsShown = false;
   chunks.forEach(({ shots: row, type }, i) => {
+    if (type === "phone") {
+      // The numbers go beside the first panel only, so they aren't repeated.
+      const info = statsShown ? null : panel;
+      statsShown ||= !!panel?.headline;
+      units.push({ key: `${keyBase}-${row[0].id}`, shrinkable: true, node: <PhonePanel shots={row} platform={platform} info={info} /> });
+      return;
+    }
     units.push({
       key: `${keyBase}-${row[0].id}`,
       shrinkable: true,
@@ -363,12 +366,6 @@ function shotUnits(
       ),
     });
   });
-  for (const s of grids) {
-    units.push({
-      key: `${keyBase}-${s.id}`,
-      node: <Phone shot={s} platform={platform} stat={phone?.stat ?? null} period={phone?.period ?? ""} />,
-    });
-  }
   return units;
 }
 
@@ -451,14 +448,14 @@ function orderedPlatforms(report: Report): Platform[] {
   return [...report.platforms, ...new Set(extra)];
 }
 
-function buildExecutive(report: Report): Unit[] {
+function buildExecutive(report: Report, period: string): Unit[] {
   const text = report.text?.executiveSummary;
   const units: Unit[] = [
     { key: "exec-text", node: text ? <Rich text={text} /> : <Placeholder /> },
     { key: "exec-glance", node: <AtAGlance report={report} /> },
   ];
   for (const p of [...orderedPlatforms(report), null]) {
-    units.push(...shotUnits(`exec-${p}`, shotsFor(report, "executive", p), p, true, null));
+    units.push(...shotUnits(`exec-${p}`, shotsFor(report, "executive", p), p, true, panelInfo(report, p, period)));
   }
   return units;
 }
@@ -473,9 +470,7 @@ function buildMetricSection(
     const block = report.text?.blocks.find((b) => b.section === section && b.platform === p);
     const shots = shotsFor(report, section, p);
     if (!block && !shots.length) continue;
-    const viewsMetric = block?.metrics.find((m) => /views/i.test(m.label) && !/second/i.test(m.label));
-    const firstMetric = viewsMetric ?? block?.metrics[0];
-    const phone: PhoneInfo = { stat: firstMetric ?? null, period };
+    const panel = panelInfo(report, p, period, section);
     units.push({
       key: `${section}-${p}-intro`,
       keepWithNext: shots.length > 0,
@@ -493,7 +488,7 @@ function buildMetricSection(
         </>
       ),
     });
-    units.push(...shotUnits(`${section}-${p}`, shots, p, BADGE_3D[section], phone));
+    units.push(...shotUnits(`${section}-${p}`, shots, p, BADGE_3D[section], panel));
   }
   units.push(...shotUnits(`${section}-none`, shotsFor(report, section, null), null, false, null));
   return units;
@@ -698,7 +693,7 @@ export function buildSections(report: Report, period = ""): BuiltSection[] {
     let units: Unit[];
     switch (s.key) {
       case "executive":
-        units = buildExecutive(report);
+        units = buildExecutive(report, period);
         break;
       case "reach":
       case "views":

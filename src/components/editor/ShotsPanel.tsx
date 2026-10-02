@@ -8,6 +8,8 @@ import { runPool } from "@/lib/api";
 import { analyseShot, processImages } from "@/lib/pipeline";
 import { prepareScreenshot } from "@/lib/image";
 import { checkFileSize, checkResolution, getRules, setRules, type UploadRules } from "@/lib/upload-rules";
+import { MIN_DESKTOP_WIDTH } from "@/lib/guide";
+import ShotGuide from "./ShotGuide";
 import {
   PLATFORM_LABEL,
   PLATFORMS,
@@ -39,6 +41,7 @@ export default function ShotsPanel({
   const [info, setInfo] = useState("");
   const [removed, setRemoved] = useState(0);
   const [rejected, setRejected] = useState<{ name: string; reason: string }[]>([]);
+  const [advice, setAdvice] = useState<string[]>([]);
 
   const patchShot = (id: string, patch: Partial<Shot>) =>
     update((r) => ({ ...r, shots: r.shots.map((s) => (s.id === id ? { ...s, ...patch } : s)) }));
@@ -56,6 +59,9 @@ export default function ShotsPanel({
     setBusy(true);
     const rules = getRules();
     const refused: { name: string; reason: string }[] = [];
+    const tips: string[] = [];
+    const small: string[] = [];
+    setAdvice([]);
     try {
       const items = [];
       // The same file uploaded twice (in this batch or before) would print twice.
@@ -79,10 +85,21 @@ export default function ShotsPanel({
           refused.push({ name, reason: resProblem });
           continue;
         }
+        // Accepted, but against the screenshot standard: say how to take it next time.
+        const phone = image.width / image.height < 0.65;
+        if (!phone && image.width < MIN_DESKTOP_WIDTH) small.push(`${name} (${image.width} px)`);
         items.push({ image, name, source });
       }
       if (!items.length) return;
+      if (small.length) {
+        tips.push(
+          `${small.length === 1 ? "This screenshot is" : `${small.length} screenshots are`} under ${MIN_DESKTOP_WIDTH.toLocaleString("en-GB")} px wide, so text prints small and soft: ${small.join(", ")}. For sharper reports, zoom the browser to 150% (Ctrl and +) before taking dashboard screenshots.`,
+        );
+      }
       const res = await processImages(update, items, report.shots.length);
+      for (const n of res.framed) {
+        tips.push(`${n} already has a phone frame, so it is shown as it is. For the standard SWS phone panel, upload the plain phone screenshot instead.`);
+      }
       setRemoved(res.removed);
       if (res.cutScreenshots) {
         setInfo(
@@ -93,6 +110,7 @@ export default function ShotsPanel({
       setError(errorMessage(e, "Could not add images"));
     } finally {
       setRejected(refused);
+      setAdvice(tips);
       setBusy(false);
     }
   }
@@ -140,7 +158,7 @@ export default function ShotsPanel({
         </div>
         <strong>Drop screenshots here</strong>
         <span className="small muted">
-          or click to choose, or paste (Ctrl/Cmd+V). Add them all at once: Facebook, Instagram, TikTok and YouTube.
+          or click to choose, or paste (Ctrl/Cmd+V). Add them all at once, for every platform; the checklist below shows what to capture.
         </span>
         <input
           type="file"
@@ -154,6 +172,21 @@ export default function ShotsPanel({
         />
       </label>
       <RulesLine />
+      <ShotGuide report={report} />
+
+      {advice.length > 0 && (
+        <div className="notice warn" style={{ marginTop: 12 }}>
+          <Icon name="image" size={16} />
+          <span>
+            <strong>Added, but not to the screenshot standard:</strong>
+            {advice.map((a, i) => (
+              <span key={i} style={{ display: "block", marginTop: 4 }}>
+                {a}
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
 
       {rejected.length > 0 && (
         <div className="notice err" style={{ marginTop: 12 }}>

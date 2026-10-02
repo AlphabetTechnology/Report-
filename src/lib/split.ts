@@ -198,6 +198,36 @@ export async function hasDeviceFrame(dataUrl: string): Promise<boolean> {
   return hits >= 2;
 }
 
+/** The area of a ready-made mockup that isn't its plain page background (the phone itself). */
+export async function contentBox(dataUrl: string): Promise<Rect | null> {
+  const img = await loadImage(dataUrl);
+  const canvas = document.createElement("canvas");
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(img, 0, 0);
+  const { data: d, width: W, height: H } = ctx.getImageData(0, 0, img.width, img.height);
+  const bg = [d[0], d[1], d[2]];
+  const differs = (i: number) => Math.abs(d[i] - bg[0]) + Math.abs(d[i + 1] - bg[1]) + Math.abs(d[i + 2] - bg[2]) > 30;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y += 2) {
+    for (let x = 0; x < W; x += 2) {
+      if (!differs((y * W + x) * 4)) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  if (x1 < 0) return null;
+  const pad = 2;
+  const r = { x: Math.max(0, x0 - pad), y: Math.max(0, y0 - pad), w: 0, h: 0 };
+  r.w = Math.min(W, x1 + pad + 1) - r.x;
+  r.h = Math.min(H, y1 + pad + 1) - r.y;
+  // Only worth it when a real margin goes.
+  return r.w * r.h < W * H * 0.92 ? r : null;
+}
+
 export async function crop(dataUrl: string, r: Rect, pad = 0): Promise<{ dataUrl: string; width: number; height: number }> {
   const img = await loadImage(dataUrl);
   const x = Math.max(0, r.x - pad);

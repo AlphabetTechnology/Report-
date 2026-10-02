@@ -2009,3 +2009,106 @@ textarea {
   align-items: center;
   gap: 6px;
 }
+
+/* ---------- screenshot checklist ---------- */
+
+.guide {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.guide-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+}
+
+.guide-body {
+  padding: 0 14px 12px;
+  border-top: 1px solid var(--line-2);
+}
+
+.guide-rules {
+  margin: 10px 0 4px;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.guide-rules li {
+  margin: 3px 0;
+}
+
+.guide-platform {
+  margin-top: 12px;
+}
+
+.guide-pname {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.guide-pname .ic {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+}
+
+.guide-pname .ic svg,
+.guide-pname .ic img {
+  width: 100%;
+  height: 100%;
+}
+
+.guide-pname .where {
+  font-weight: 400;
+  font-size: 11.5px;
+  color: var(--muted);
+  flex-basis: 100%;
+  margin-left: 24px;
+}
+
+.guide-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  padding: 3px 0 3px 24px;
+  color: var(--muted);
+}
+
+.guide-item .tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid #c8cfda;
+  flex: none;
+}
+
+.guide-item.ok {
+  color: var(--ink);
+}
+
+.guide-item.ok .tick {
+  border-color: #12a150;
+  background: #12a150;
+  color: #fff;
+}
