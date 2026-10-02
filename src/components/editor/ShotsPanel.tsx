@@ -58,8 +58,16 @@ export default function ShotsPanel({
     const refused: { name: string; reason: string }[] = [];
     try {
       const items = [];
+      // The same file uploaded twice (in this batch or before) would print twice.
+      const seen = new Map(report.shots.filter((s) => s.source).map((s) => [s.source!, s.fileName.split(" · ")[0]]));
       for (const [i, f] of images.entries()) {
         const name = f.name || `pasted-${i + 1}.png`;
+        const source = await fingerprint(f);
+        if (seen.has(source)) {
+          refused.push({ name, reason: `the same screenshot as ${seen.get(source)}, which is already in this report.` });
+          continue;
+        }
+        seen.set(source, name);
         const sizeProblem = checkFileSize(f, rules);
         if (sizeProblem) {
           refused.push({ name, reason: sizeProblem });
@@ -71,7 +79,7 @@ export default function ShotsPanel({
           refused.push({ name, reason: resProblem });
           continue;
         }
-        items.push({ image, name });
+        items.push({ image, name, source });
       }
       if (!items.length) return;
       const res = await processImages(update, items, report.shots.length);
@@ -315,6 +323,12 @@ export default function ShotsPanel({
       })}
     </div>
   );
+}
+
+/** Short fingerprint of a file's bytes. */
+async function fingerprint(file: File): Promise<string> {
+  const hash = await crypto.subtle.digest("SHA-1", await file.arrayBuffer());
+  return Array.from(new Uint8Array(hash).slice(0, 12), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /** The upload limits, shown under the drop zone and editable by the team. */

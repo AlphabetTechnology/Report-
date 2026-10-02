@@ -106,7 +106,7 @@ function ShotImg({ shot, w, h }: { shot: Shot; w: number; h: number }) {
  */
 /** Longer than a phone screen: a scrolling capture, shown as a tall plain card. */
 const isLongShot = (s: Shot) => s.width / s.height < 0.38;
-const isPhoneShot = (s: Shot) => s.width / s.height < 0.7 && !isLongShot(s) && !s.context;
+const isPhoneShot = (s: Shot) => s.width / s.height < 0.7 && !isLongShot(s) && !s.context && !s.framed;
 /** A banner-shaped screenshot, too wide to share a row. */
 const isWideShot = (s: Shot) => s.width / s.height > 2.2;
 
@@ -165,6 +165,17 @@ function Card({
   badge3d: boolean;
   badge?: boolean;
 }) {
+  if (shots.length === 1 && shots[0].framed) {
+    const { w, h } = fit(shots[0], 110, 165);
+    return (
+      <div className="rpt-card-wrap" style={badge && platform ? undefined : { paddingTop: "3mm" }}>
+        <div className="rpt-framed" data-grow="phone">
+          {badge && platform && <Badge platform={platform} style3d={badge3d} />}
+          <ShotImg shot={shots[0]} w={w} h={h} />
+        </div>
+      </div>
+    );
+  }
   if (shots.length <= 3 && shots.every(isPhoneShot)) {
     return <PhoneRow shots={shots} platform={platform} badge3d={badge3d} badge={badge} />;
   }
@@ -316,14 +327,15 @@ function shotUnits(
   badge = true,
 ): Unit[] {
   const units: Unit[] = [];
-  const grids = shots.filter((s) => s.kind === "profile_grid");
-  const rest = shots.filter((s) => s.kind !== "profile_grid");
+  // An image that already has a phone frame is never put in another phone.
+  const grids = shots.filter((s) => s.kind === "profile_grid" && !s.framed);
+  const rest = shots.filter((s) => s.kind !== "profile_grid" || s.framed);
   // Screenshots of one platform are laid out by shape, in the team's order: phone
   // screens three across in device frames, ordinary cards two across, and wide
   // banners, long scrolling captures and dashboards each on their own. So 2, 3 or
   // 10 uploads all lay out neatly whatever mix of shapes they are.
   const shape = (s: Shot): "phone" | "card" | "single" =>
-    WIDE_KINDS.has(s.kind) || s.kind === "content_overview" || isWideShot(s) || isLongShot(s)
+    s.framed || WIDE_KINDS.has(s.kind) || s.kind === "content_overview" || isWideShot(s) || isLongShot(s)
       ? "single"
       : isPhoneShot(s)
         ? "phone"

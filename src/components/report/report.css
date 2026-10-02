@@ -1118,3 +1118,14 @@
   border-radius: 50%;
   background: radial-gradient(ellipse, rgba(14, 42, 78, 0.3) 0%, rgba(14, 42, 78, 0) 70%);
 }
+
+/* An image that already shows a phone (a mockup): no card, just a soft shadow. */
+.rpt-framed {
+  position: relative;
+  padding-top: 9mm;
+}
+
+.rpt-framed img.rpt-shot {
+  display: block;
+  filter: drop-shadow(0 4mm 6mm rgba(14, 42, 78, 0.22));
+}

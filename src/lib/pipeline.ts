@@ -5,7 +5,7 @@ import { errorMessage } from "./errors";
 import { formatMonth, formatPeriod, monthName } from "./format";
 import { listFields } from "./fields";
 import { imageForApi } from "./image";
-import { crop, findCards, type CardLayout } from "./split";
+import { crop, findCards, hasDeviceFrame, type CardLayout } from "./split";
 import { newId } from "./store";
 import {
   KIND_SECTION,
@@ -143,6 +143,8 @@ interface Pending {
   platform?: Platform | null;
   /** Shot this image replaces, when re-processing. */
   replaces?: string;
+  /** Fingerprint of the uploaded file (see Shot.source). */
+  source?: string;
   /** The team's own choices on the shot being replaced, kept after re-reading. */
   keep?: { hidden?: boolean; order: number };
 }
@@ -158,21 +160,28 @@ export async function processImages(update: Update, items: Pending[], startOrder
   const replacements = new Map<string, Shot[]>();
   const kept = new Map<string, Pending>();
 
+  // Trimmed screenshots: the platform read from the full image (the trim can cut
+  // off Meta's "Facebook ▾ / Instagram ▾" switcher at the top).
+  const trimmed = new Map<string, string>();
   for (const it of items) {
-    const layout: CardLayout = await findCards(it.image.dataUrl).catch(() => ({ type: "none" }) as const);
+    const framed = await hasDeviceFrame(it.image.dataUrl).catch(() => false);
+    const layout: CardLayout = framed
+      ? { type: "none" }
+      : await findCards(it.image.dataUrl).catch(() => ({ type: "none" }) as const);
     let made: Shot[];
     if (layout.type === "grid") {
       const cards: Shot[] = [];
       for (const [j, r] of layout.cards.entries()) {
-        cards.push(newShot(await crop(it.image.dataUrl, r, 2), `${it.name} · part ${j + 1}`, order++));
+        cards.push({ ...newShot(await crop(it.image.dataUrl, r, 2), `${it.name} · part ${j + 1}`, order++), source: it.source });
       }
       groups.push({ full: it.image.dataUrl, name: it.name, platform: it.platform, cards });
       made = cards;
     } else {
       const img = layout.type === "trim" ? await crop(it.image.dataUrl, layout.rect, 4) : it.image;
-      const s = newShot(img, it.name, order++);
+      const s = { ...newShot(img, it.name, order++), source: it.source, ...(framed ? { framed: true } : {}) };
       singles.push(s);
       if (it.replaces) kept.set(s.id, it);
+      if (layout.type === "trim") trimmed.set(s.id, it.image.dataUrl);
       made = [s];
     }
     if (it.replaces) replacements.set(it.replaces, made);
@@ -193,8 +202,12 @@ export async function processImages(update: Update, items: Pending[], startOrder
   };
   await Promise.all([
     runPool(singles, 3, async (s) => {
-      const res = await analyseShot(update, s);
+      const full = trimmed.get(s.id);
+      const [res, fullPlatform] = await Promise.all([analyseShot(update, s), full ? dashboardPlatform(full) : null]);
       count(res);
+      if (res === "ok" && fullPlatform) {
+        update((r) => ({ ...r, shots: r.shots.map((x) => (x.id === s.id ? { ...x, platform: fullPlatform } : x)) }));
+      }
       // Re-reading must not undo the team's corrections: platform, hidden, order.
       const k = kept.get(s.id);
       if (res === "ok" && k) {
@@ -238,6 +251,7 @@ export async function reprocessShots(update: Update, report: Report): Promise<Pr
         name: s.fileName,
         platform: s.platform,
         replaces: s.id,
+        source: s.source,
         keep: { hidden: s.hidden, order: s.order },
       })),
       report.shots.length,

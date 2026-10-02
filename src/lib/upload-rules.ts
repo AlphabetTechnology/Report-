@@ -9,7 +9,7 @@ export interface UploadRules {
   maxMb: number;
 }
 
-export const DEFAULT_RULES: UploadRules = { minKb: 30, minPx: 500, maxMb: 20 };
+export const DEFAULT_RULES: UploadRules = { minKb: 8, minPx: 500, maxMb: 20 };
 
 const STORAGE = "sws_upload_rules";
 export const RULES_EVENT = "sws:upload-rules";

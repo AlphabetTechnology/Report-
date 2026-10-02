@@ -136,7 +136,9 @@ export async function findCards(dataUrl: string): Promise<CardLayout> {
     h: Math.round(r.h / scale),
   });
 
-  if (rects.length >= 2 && isGrid(rects)) {
+  // A phone screenshot is never cut up: its "grid" is a grid of posts, not cards.
+  const phoneShaped = img.width / img.height < 0.65;
+  if (rects.length >= 2 && isGrid(rects) && !phoneShaped) {
     const cards = rects.sort((a, b) => a.y - b.y || a.x - b.x).map(back);
     return { type: "grid", cards };
   }
@@ -148,6 +150,54 @@ export async function findCards(dataUrl: string): Promise<CardLayout> {
 }
 
 /** Crops part of an image; keeps PNG so text stays sharp. */
+/**
+ * Whether the image is already a phone mockup (a screenshot inside a drawn phone
+ * frame on a light background), so the report shows it as it is.
+ */
+export async function hasDeviceFrame(dataUrl: string): Promise<boolean> {
+  const img = await loadImage(dataUrl);
+  if (img.width / img.height > 0.8) return false;
+  const scale = Math.min(1, 600 / Math.max(img.width, img.height));
+  const W = Math.round(img.width * scale);
+  const H = Math.round(img.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(img, 0, 0, W, H);
+  const d = ctx.getImageData(0, 0, W, H).data;
+  const lum = (x: number, y: number) => {
+    const p = (y * W + x) * 4;
+    return (d[p] + d[p + 1] + d[p + 2]) / 3;
+  };
+  // Corners are page background (light), not screen content.
+  const corners = [lum(1, 1), lum(W - 2, 1), lum(1, H - 2), lum(W - 2, H - 2)];
+  if (corners.some((v) => v < 200)) return false;
+  // Walking in from each side at several heights: a light margin, then the thick
+  // black bezel of the drawn phone, at the same distance from both edges.
+  const bezelAt = (y: number, dir: 1 | -1): number | null => {
+    const at = (i: number) => (dir === 1 ? i : W - 1 - i);
+    const margin = Math.max(2, Math.round(W * 0.02));
+    for (let i = 0; i < margin; i++) if (lum(at(i), y) < 180) return null;
+    const need = Math.max(4, Math.round(W * 0.012));
+    let run = 0;
+    for (let i = margin; i < W * 0.2; i++) {
+      if (lum(at(i), y) < 40) {
+        if (++run >= need) return i - run + 1;
+      } else run = 0;
+    }
+    return null;
+  };
+  let hits = 0;
+  for (const f of [0.3, 0.5, 0.7]) {
+    const y = Math.round(H * f);
+    const l = bezelAt(y, 1);
+    const r = bezelAt(y, -1);
+    if (l !== null && r !== null && Math.abs(l - r) <= W * 0.03) hits++;
+  }
+  return hits >= 2;
+}
+
 export async function crop(dataUrl: string, r: Rect, pad = 0): Promise<{ dataUrl: string; width: number; height: number }> {
   const img = await loadImage(dataUrl);
   const x = Math.max(0, r.x - pad);
@@ -298,7 +348,9 @@ export async function eraseChangeLabels(dataUrl: string): Promise<string> {
   // Group glyphs of one label: join core pixels up to `gap` px apart horizontally.
   const gap = Math.max(4, Math.round(W * 0.008));
   const seen = new Uint8Array(W * H);
-  const boxes: { x0: number; y0: number; x1: number; y1: number; n: number }[] = [];
+  // `solid`: a filled red shape (notification badge, dot, button), never text.
+  // Measured: label glyphs are at most ~60% filled, badges and dots 68–81%.
+  const boxes: { x0: number; y0: number; x1: number; y1: number; n: number; solid: boolean }[] = [];
   const stack: number[] = [];
   for (let start = 0; start < core.length; start++) {
     if (!core[start] || seen[start]) continue;
@@ -328,7 +380,9 @@ export async function eraseChangeLabels(dataUrl: string): Promise<string> {
         }
       }
     }
-    boxes.push({ x0, y0, x1, y1, n });
+    const bw = x1 - x0 + 1;
+    const bh = y1 - y0 + 1;
+    boxes.push({ x0, y0, x1, y1, n, solid: Math.min(bw, bh) >= 8 && n / (bw * bh) > 0.64 });
   }
 
   // Small text breaks into several pieces ("92.3", "%", the arrow): join pieces
@@ -359,6 +413,7 @@ export async function eraseChangeLabels(dataUrl: string): Promise<string> {
       m.x1 = Math.max(m.x1, b.x1);
       m.y1 = Math.max(m.y1, b.y1);
       m.n += b.n;
+      m.solid ||= b.solid;
     }
   });
   const groups = [...merged.values()];
@@ -378,13 +433,37 @@ export async function eraseChangeLabels(dataUrl: string): Promise<string> {
     // text don't count.
     return n >= Math.max(3, b.n * 0.2);
   };
+  // Black text drawn with ClearType has thin red edges that look like red text.
+  // A real label is mostly red ink; black text with red edges is mostly black.
+  const mostlyRed = (b: (typeof boxes)[number]) => {
+    // Only matters on light backgrounds (dark-mode phone screens have no ClearType).
+    let edge = 0;
+    let edgeN = 0;
+    for (let x = b.x0; x <= b.x1; x++) {
+      for (const y of [Math.max(0, b.y0 - 2), Math.min(H - 1, b.y1 + 2)]) {
+        const p = (y * W + x) * 4;
+        edge += d[p] + d[p + 1] + d[p + 2];
+        edgeN++;
+      }
+    }
+    if (edge / edgeN < 300) return true;
+    let black = 0;
+    for (let y = b.y0; y <= b.y1; y++) {
+      for (let x = b.x0; x <= b.x1; x++) {
+        const p = (y * W + x) * 4;
+        const spread = Math.max(d[p], d[p + 1], d[p + 2]) - Math.min(d[p], d[p + 1], d[p + 2]);
+        if (spread < 40 && d[p] + d[p + 1] + d[p + 2] < 300) black++;
+      }
+    }
+    return black <= b.n * 0.5;
+  };
   // A label is a short, wide run of thin text strokes. Logos (e.g. Instagram's
   // gradient icon) are solid blocks of colour, so they fail the density test.
   const labels = groups.filter((b) => {
     const w = b.x1 - b.x0 + 1;
     const h = b.y1 - b.y0 + 1;
     const density = b.n / (w * h);
-    return h >= 5 && h <= maxH && w >= h * 1.8 && b.n >= 8 && density < 0.55 && !nearLogoColours(b);
+    return h >= 5 && h <= maxH && w >= h * 1.8 && b.n >= 8 && density < 0.55 && !nearLogoColours(b) && mostlyRed(b) && !b.solid;
   });
 
   let changed = false;

@@ -32,7 +32,7 @@ const AnalysisSchema = z.object({
 const SYSTEM = `You read screenshots of social media analytics dashboards for a monthly client report: Meta Business Suite (Facebook, Instagram), TikTok Studio, YouTube Studio, LinkedIn Page analytics, Pinterest Analytics, Google Business Profile performance ("gmb"), or the apps themselves.
 
 For the screenshot, decide:
-- platform: the platform the data belongs to (facebook, instagram, tiktok, youtube, linkedin, pinterest, gmb). Meta Business Suite shows a Facebook or Instagram icon next to the card title or in the breakdown. Google Business Profile ("Business Profile", "Performance", calls, directions, website clicks, "Searches", Google Maps/Search) is "gmb". A screenshot of a profile in a phone app belongs to that app. Use "unknown" only if there is really no clue.
+- platform: the platform the data belongs to (facebook, instagram, tiktok, youtube, linkedin, pinterest, gmb). Meta Business Suite shows the selected account in a switcher at the top ("Facebook ▾" or "Instagram ▾"): when it is visible it decides the platform, even if the page looks the same for both. Otherwise use the Facebook or Instagram icon next to the card title or in the breakdown. Google Business Profile ("Business Profile", "Performance", calls, directions, website clicks, "Searches", Google Maps/Search) is "gmb". A screenshot of a profile in a phone app belongs to that app. Use "unknown" only if there is really no clue.
 - kind, which decides where it goes in the report:
   - content_overview: a summary card with several headline numbers (views, reach, interactions, watch time) and usually a chart
   - reach: a single "Reach", "Viewers", "Unique viewers", "Impressions", "Unique visitors" or Google "Profile views"/"People viewed your Business Profile" card or chart
@@ -102,7 +102,7 @@ export async function identifyPlatform(client: Anthropic, dataUrl: string, model
   const { platform } = await structuredCall(client, {
     schema: PlatformSchema,
     system:
-      "You identify which social media or business platform an analytics screenshot is from: facebook, instagram, tiktok, youtube, linkedin, pinterest or gmb (Google Business Profile). Use logos, icons, colours and wording. Answer unknown if you cannot tell.",
+      "You identify which social media or business platform an analytics screenshot is from: facebook, instagram, tiktok, youtube, linkedin, pinterest or gmb (Google Business Profile). In Meta Business Suite the switcher at the top (\"Facebook ▾\" or \"Instagram ▾\") decides it. Otherwise use logos, icons, colours and wording. Answer unknown if you cannot tell.",
     effort: "low",
     maxTokens: 2000,
     model,

@@ -135,6 +135,10 @@ export interface Shot {
   hidden?: boolean;
   /** Extra context for Claude, e.g. which dashboard a cut-out card came from. */
   context?: string;
+  /** Fingerprint of the uploaded file, to spot the same screenshot uploaded twice. */
+  source?: string;
+  /** Already a phone mockup (screenshot inside a drawn phone): shown as it is, never re-framed. */
+  framed?: boolean;
   /** Version of the screenshot reading that produced `extraction` (see lib/pipeline.ts). */
   read?: number;
   error?: string;
