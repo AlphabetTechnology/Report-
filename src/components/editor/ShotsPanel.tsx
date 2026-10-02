@@ -7,6 +7,7 @@ import Icon from "@/components/Icon";
 import { runPool } from "@/lib/api";
 import { analyseShot, processImages } from "@/lib/pipeline";
 import { prepareScreenshot } from "@/lib/image";
+import { checkFileSize, checkResolution, getRules, setRules, type UploadRules } from "@/lib/upload-rules";
 import {
   PLATFORM_LABEL,
   PLATFORMS,
@@ -37,6 +38,7 @@ export default function ShotsPanel({
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [removed, setRemoved] = useState(0);
+  const [rejected, setRejected] = useState<{ name: string; reason: string }[]>([]);
 
   const patchShot = (id: string, patch: Partial<Shot>) =>
     update((r) => ({ ...r, shots: r.shots.map((s) => (s.id === id ? { ...s, ...patch } : s)) }));
@@ -52,11 +54,27 @@ export default function ShotsPanel({
     setInfo("");
     setRemoved(0);
     setBusy(true);
+    const rules = getRules();
+    const refused: { name: string; reason: string }[] = [];
     try {
       const items = [];
       for (const [i, f] of images.entries()) {
-        items.push({ image: await prepareScreenshot(f), name: f.name || `pasted-${i + 1}.png` });
+        const name = f.name || `pasted-${i + 1}.png`;
+        const sizeProblem = checkFileSize(f, rules);
+        if (sizeProblem) {
+          refused.push({ name, reason: sizeProblem });
+          continue;
+        }
+        const image = await prepareScreenshot(f);
+        const resProblem = checkResolution(image.width, image.height, rules);
+        if (resProblem) {
+          refused.push({ name, reason: resProblem });
+          continue;
+        }
+        items.push({ image, name });
       }
+      setRejected(refused);
+      if (!items.length) return;
       const res = await processImages(update, items, report.shots.length);
       setRemoved(res.removed);
       if (res.cutScreenshots) {
@@ -116,8 +134,34 @@ export default function ShotsPanel({
         <span className="small muted">
           or click to choose, or paste (Ctrl/Cmd+V). Add them all at once: Facebook, Instagram, TikTok and YouTube.
         </span>
-        <input type="file" accept="image/*" multiple hidden onChange={(e) => addFiles(Array.from(e.target.files ?? []))} />
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          onChange={(e) => {
+            addFiles(Array.from(e.target.files ?? []));
+            e.target.value = "";
+          }}
+        />
       </label>
+      <RulesLine />
+
+      {rejected.length > 0 && (
+        <div className="notice err" style={{ marginTop: 12 }}>
+          <Icon name="x" size={16} />
+          <span>
+            <strong>
+              {rejected.length} screenshot{rejected.length === 1 ? " was" : "s were"} not added:
+            </strong>
+            {rejected.map((r) => (
+              <span key={r.name} style={{ display: "block", marginTop: 4 }}>
+                <b>{r.name}</b> is {r.reason}
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
 
       {(busy || pending > 0) && (
         <div className="notice" style={{ marginTop: 12 }}>
@@ -269,6 +313,50 @@ export default function ShotsPanel({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** The upload limits, shown under the drop zone and editable by the team. */
+function RulesLine() {
+  const [rules, setLocal] = useState<UploadRules | null>(null);
+  const [editing, setEditing] = useState(false);
+  const shown = rules ?? (typeof window === "undefined" ? null : getRules());
+  if (!shown) return null;
+  const num = (k: keyof UploadRules) => (
+    <input
+      className="input"
+      type="number"
+      min={0}
+      value={shown[k]}
+      style={{ width: 76, padding: "4px 8px" }}
+      onChange={(e) => setLocal({ ...shown, [k]: Math.max(0, Number(e.target.value) || 0) })}
+    />
+  );
+  if (!editing) {
+    return (
+      <p className="small muted" style={{ margin: "8px 0 0" }}>
+        Accepted: at least {shown.minKb} KB and {shown.minPx} px on the long side, up to {shown.maxMb} MB.{" "}
+        <button className="link-btn" onClick={() => setEditing(true)}>
+          Change
+        </button>
+      </p>
+    );
+  }
+  return (
+    <div className="rules-edit small">
+      <label>Min size (KB) {num("minKb")}</label>
+      <label>Min long side (px) {num("minPx")}</label>
+      <label>Max size (MB) {num("maxMb")}</label>
+      <button
+        className="btn small primary"
+        onClick={() => {
+          setRules(shown);
+          setEditing(false);
+        }}
+      >
+        Save
+      </button>
     </div>
   );
 }

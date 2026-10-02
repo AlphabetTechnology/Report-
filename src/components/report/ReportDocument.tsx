@@ -16,25 +16,50 @@ const CONTENT_HEIGHT_MM = 246;
 
 /** Screenshots may shrink to this share of their size to fill a page. */
 const MIN_SHRINK = 0.6;
+/** ...or grow up to this much to use space a page would otherwise leave empty. */
+const MAX_GROW = 1.5;
+/** Width of the page body, which a grown screenshot must stay inside. */
+const BODY_WIDTH_MM = 180;
+/** Space above a section that starts part-way down a page. */
+const SECTION_GAP_MM = 9;
+/** A section only starts part-way down a page when at least this much room is left. */
+const MIN_ROOM_FOR_SECTION = 0.3;
 
 interface Placed {
   unit: Unit;
   scale: number;
+  /** First unit of a section that starts below another one on the same page. */
+  gapAbove?: boolean;
 }
 
 interface ContentPage {
-  section: BuiltSection;
   units: Placed[];
+  /** Sections whose first unit is on this page. */
+  starts: string[];
 }
 
-function paginate(sections: BuiltSection[], heights: Record<string, number>): ContentPage[] {
+interface Measured {
+  heights: Record<string, number>;
+  /** Width of the growable part (screenshot card or phones) of a unit. */
+  widths: Record<string, number>;
+}
+
+function paginate(sections: BuiltSection[], { heights, widths }: Measured): ContentPage[] {
   const cap = CONTENT_HEIGHT_MM * MM;
+  const gap = SECTION_GAP_MM * MM;
   const pages: ContentPage[] = [];
   const height = (u: Unit) => heights[u.key] ?? 0;
   const minHeight = (u: Unit) => height(u) * (u.shrinkable ? MIN_SHRINK : 1);
+  let cur: Placed[] = [];
+  let starts: string[] = [];
+  let used = 0;
+  const newPage = () => {
+    if (cur.length) pages.push({ units: cur, starts });
+    cur = [];
+    starts = [];
+    used = 0;
+  };
   for (const section of sections) {
-    let cur: Placed[] = [];
-    let used = 0;
     const units = section.units;
     for (let i = 0; i < units.length; i++) {
       const u = units[i];
@@ -47,18 +72,38 @@ function paginate(sections: BuiltSection[], heights: Record<string, number>): Co
       }
       // If the group cannot fit even on an empty page, only the unit itself matters.
       if (need > cap) need = minHeight(u);
-      if (cur.length && used + Math.min(need, cap) > cap) {
-        pages.push({ section, units: cur });
-        cur = [];
-        used = 0;
+      const first = i === 0;
+      if (first && cur.length) {
+        // Start the section here only if its opening fits and enough of the page is left.
+        const room = cap - used - gap;
+        if (room < cap * MIN_ROOM_FOR_SECTION || need > room) newPage();
+      } else if (cur.length && used + Math.min(need, cap) > cap) {
+        newPage();
       }
+      const gapAbove = first && cur.length > 0;
+      if (gapAbove) used += gap;
+      if (first) starts.push(section.key);
       // Shrink a screenshot a little rather than leave a half-empty page.
       const room = cap - used;
       const scale = u.shrinkable && h > room ? Math.max(MIN_SHRINK, room / h) : 1;
-      cur.push({ unit: u, scale });
+      cur.push({ unit: u, scale, gapAbove });
       used += h * scale;
     }
-    if (cur.length) pages.push({ section, units: cur });
+  }
+  newPage();
+
+  // Screenshots on a page with space left over grow (within the page width) to use it.
+  for (const page of pages) {
+    const total = page.units.reduce((t, p) => t + height(p.unit) * p.scale + (p.gapAbove ? gap : 0), 0);
+    const spare = cap - total;
+    const growable = page.units.filter((p) => p.scale === 1 && widths[p.unit.key]);
+    const growH = growable.reduce((t, p) => t + height(p.unit), 0);
+    if (spare < 12 * MM || !growH) continue;
+    const factor = Math.min(MAX_GROW, 1 + (spare * 0.96) / growH);
+    for (const p of growable) {
+      const byWidth = (BODY_WIDTH_MM * MM) / widths[p.unit.key];
+      p.scale = Math.max(1, Math.min(factor, byWidth));
+    }
   }
   return pages;
 }
@@ -196,7 +241,7 @@ export default function ReportDocument({
     [report, english],
   );
   const measureRef = useRef<HTMLDivElement>(null);
-  const [heights, setHeights] = useState<Record<string, number> | null>(null);
+  const [measured, setMeasured] = useState<Measured | null>(null);
   const [mounted, setMounted] = useState(false);
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
@@ -204,17 +249,17 @@ export default function ReportDocument({
   const measure = useCallback(() => {
     const root = measureRef.current;
     if (!root) return;
-    const next: Record<string, number> = {};
+    const heights: Record<string, number> = {};
+    const widths: Record<string, number> = {};
     root.querySelectorAll<HTMLElement>("[data-unit]").forEach((el) => {
-      next[el.dataset.unit!] = el.getBoundingClientRect().height;
+      heights[el.dataset.unit!] = el.getBoundingClientRect().height;
+      const grow = el.querySelector<HTMLElement>("[data-grow]");
+      if (grow) widths[el.dataset.unit!] = grow.getBoundingClientRect().width;
     });
-    setHeights((prev) => {
-      if (prev && Object.keys(next).length === Object.keys(prev).length &&
-          Object.entries(next).every(([k, v]) => Math.abs((prev[k] ?? -1) - v) < 0.5)) {
-        return prev;
-      }
-      return next;
-    });
+    const same = (a: Record<string, number>, b: Record<string, number>) =>
+      Object.keys(a).length === Object.keys(b).length &&
+      Object.entries(a).every(([k, v]) => Math.abs((b[k] ?? -1) - v) < 0.5);
+    setMeasured((prev) => (prev && same(heights, prev.heights) && same(widths, prev.widths) ? prev : { heights, widths }));
   }, []);
 
   useLayoutEffect(() => {
@@ -231,11 +276,11 @@ export default function ReportDocument({
     };
   }, [measure]);
 
-  const pages = useMemo(() => (heights ? paginate(sections, heights) : []), [sections, heights]);
+  const pages = useMemo(() => (measured ? paginate(sections, measured) : []), [sections, measured]);
 
   const firstPage: Record<string, number> = {};
   pages.forEach((p, i) => {
-    firstPage[p.section.key] ??= i + 3;
+    for (const key of p.starts) firstPage[key] ??= i + 3;
   });
 
   const total = pages.length + 3;
@@ -267,8 +312,15 @@ export default function ReportDocument({
         <section className="rpt-page" key={i}>
           <WaveTop />
           <div className="rpt-body">
-            {p.units.map(({ unit, scale }) => (
-              <div className="rpt-unit" key={unit.key} style={scale < 1 ? { zoom: scale } : undefined}>
+            {p.units.map(({ unit, scale, gapAbove }) => (
+              <div
+                className="rpt-unit"
+                key={unit.key}
+                style={{
+                  ...(scale !== 1 ? { zoom: scale } : null),
+                  ...(gapAbove ? { marginTop: `${SECTION_GAP_MM / scale}mm` } : null),
+                }}
+              >
                 {unit.node}
               </div>
             ))}

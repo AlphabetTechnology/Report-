@@ -1005,3 +1005,108 @@
     margin-top: 0;
   }
 }
+
+/* ---------- phone screenshots in a device frame ---------- */
+
+.rpt-phones {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12mm 12mm 11mm;
+  border-radius: 6mm;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 42%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 70%),
+    linear-gradient(160deg, #eaf3fc 0%, #f6f9fd 48%, #fdf3e7 100%);
+  box-shadow: inset 0 0 0 0.35mm rgba(20, 113, 185, 0.12);
+}
+
+.rpt-phones > .rpt-badge {
+  border-color: var(--ring);
+  box-shadow: 0 2mm 5mm rgba(14, 42, 78, 0.14);
+}
+
+.rpt-phones-dots {
+  position: absolute;
+  width: 22mm;
+  height: 16mm;
+  background-image: radial-gradient(rgba(20, 113, 185, 0.28) 0.42mm, transparent 0.48mm);
+  background-size: 3.2mm 3.2mm;
+}
+
+.rpt-phones-dots.a {
+  left: 5mm;
+  top: 6mm;
+}
+
+.rpt-phones-dots.b {
+  right: 5mm;
+  bottom: 6mm;
+  background-image: radial-gradient(rgba(247, 148, 31, 0.4) 0.42mm, transparent 0.48mm);
+}
+
+.rpt-device-stage {
+  position: relative;
+}
+
+.rpt-device {
+  position: relative;
+  padding: 0.8mm;
+  background: linear-gradient(145deg, #f5f6f8 0%, #9fa5ad 18%, #e9ebee 36%, #7d838b 60%, #d8dbdf 82%, #969ca3 100%);
+  box-shadow:
+    0 2.5mm 5mm -1.5mm rgba(14, 42, 78, 0.35),
+    0 12mm 22mm -8mm rgba(14, 42, 78, 0.38);
+}
+
+.rpt-device-bezel {
+  position: relative;
+  padding: 2mm;
+  background: #050506;
+}
+
+.rpt-device-bezel img {
+  display: block;
+  object-fit: cover;
+  object-position: top;
+}
+
+/* Soft glass reflection over the screen */
+.rpt-device-glare {
+  position: absolute;
+  inset: 2mm;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 24%, rgba(255, 255, 255, 0) 36%);
+  pointer-events: none;
+}
+
+.rpt-device i {
+  position: absolute;
+  width: 0.9mm;
+  border-radius: 0.5mm;
+  background: linear-gradient(90deg, #767c84, #cfd3d8 60%, #888e95);
+}
+
+.rpt-device i.b1 {
+  left: -0.7mm;
+  height: 6mm;
+}
+
+.rpt-device i.b2 {
+  left: -0.7mm;
+  height: 10mm;
+}
+
+.rpt-device i.b3 {
+  right: -0.7mm;
+  height: 14mm;
+}
+
+.rpt-device-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: -4.5mm;
+  width: 80%;
+  height: 5mm;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(14, 42, 78, 0.3) 0%, rgba(14, 42, 78, 0) 70%);
+}

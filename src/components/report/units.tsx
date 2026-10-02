@@ -91,6 +91,53 @@ function ShotImg({ shot, w, h }: { shot: Shot; w: number; h: number }) {
   );
 }
 
+/** A phone screenshot (tall and narrow), shown in a device frame rather than a flat card. */
+const isPhoneShot = (s: Shot) => s.width / s.height < 0.7;
+
+/** Frame thickness around the screen: metal edge + black bezel (mm). */
+const FRAME = 2.8;
+
+function Device({ shot, w, h }: { shot: Shot; w: number; h: number }) {
+  const src = useCleanImage(shot);
+  const radius = Math.min(9, w * 0.12);
+  return (
+    <div className="rpt-device-stage">
+      <div className="rpt-device" style={{ borderRadius: `${radius + FRAME}mm` }}>
+        <i className="b1" style={{ top: `${h * 0.16}mm` }} />
+        <i className="b2" style={{ top: `${h * 0.26}mm` }} />
+        <i className="b3" style={{ top: `${h * 0.22}mm` }} />
+        <div className="rpt-device-bezel" style={{ borderRadius: `${radius + FRAME - 0.8}mm` }}>
+          <img src={src} alt={shot.fileName} style={{ width: `${w}mm`, height: `${h}mm`, borderRadius: `${radius}mm` }} />
+          <span className="rpt-device-glare" style={{ borderRadius: `${radius}mm` }} />
+        </div>
+      </div>
+      <div className="rpt-device-shadow" />
+    </div>
+  );
+}
+
+/** One to three phone screenshots standing on a soft branded backdrop. */
+function PhoneRow({ shots, platform, badge3d, badge }: { shots: Shot[]; platform: Platform | null; badge3d: boolean; badge: boolean }) {
+  const n = shots.length;
+  const gap = n > 2 ? 9 : 14;
+  const colW = (150 - (n - 1) * gap) / n - FRAME * 2;
+  const maxH = n === 1 ? 150 : n === 2 ? 128 : 108;
+  const sized = shots.map((s) => ({ s, ...fit(s, colW, maxH) }));
+  const showBadge = badge && platform;
+  return (
+    <div className="rpt-card-wrap" style={showBadge ? undefined : { paddingTop: "3mm" }}>
+      <div className="rpt-phones" data-grow style={{ gap: `${gap}mm`, ["--ring" as string]: platform ? PLATFORM_RING[platform] : "#1471b9" }}>
+        <span className="rpt-phones-dots a" />
+        <span className="rpt-phones-dots b" />
+        {showBadge && <Badge platform={platform} style3d={badge3d} />}
+        {sized.map(({ s, w, h }) => (
+          <Device key={s.id} shot={s} w={w} h={h} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Card({
   shots,
   platform,
@@ -102,6 +149,9 @@ function Card({
   badge3d: boolean;
   badge?: boolean;
 }) {
+  if (shots.length <= 3 && shots.every(isPhoneShot)) {
+    return <PhoneRow shots={shots} platform={platform} badge3d={badge3d} badge={badge} />;
+  }
   const n = shots.length;
   const portrait = shots.every((s) => s.width / s.height < 0.85);
   const colW = (172 - (n - 1) * 2.4) / Math.max(n, 1);
@@ -112,7 +162,7 @@ function Card({
   const showBadge = badge && platform;
   return (
     <div className="rpt-card-wrap" style={showBadge ? undefined : { paddingTop: "3mm" }}>
-      <div className="rpt-card">
+      <div className="rpt-card" data-grow>
         {showBadge && <Badge platform={platform} style3d={badge3d} />}
         {sized.map(({ s, w, h }) => (
           <ShotImg key={s.id} shot={s} w={w} h={h} />

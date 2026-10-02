@@ -1995,3 +1995,17 @@ textarea {
 .int-cost svg {
   vertical-align: -2px;
 }
+
+.rules-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 8px;
+}
+
+.rules-edit label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
