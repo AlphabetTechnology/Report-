@@ -73,7 +73,6 @@ export default function ShotsPanel({
         }
         items.push({ image, name });
       }
-      setRejected(refused);
       if (!items.length) return;
       const res = await processImages(update, items, report.shots.length);
       setRemoved(res.removed);
@@ -85,6 +84,7 @@ export default function ShotsPanel({
     } catch (e) {
       setError(errorMessage(e, "Could not add images"));
     } finally {
+      setRejected(refused);
       setBusy(false);
     }
   }
@@ -154,8 +154,8 @@ export default function ShotsPanel({
             <strong>
               {rejected.length} screenshot{rejected.length === 1 ? " was" : "s were"} not added:
             </strong>
-            {rejected.map((r) => (
-              <span key={r.name} style={{ display: "block", marginTop: 4 }}>
+            {rejected.map((r, i) => (
+              <span key={i} style={{ display: "block", marginTop: 4 }}>
                 <b>{r.name}</b> is {r.reason}
               </span>
             ))}
@@ -319,30 +319,39 @@ export default function ShotsPanel({
 
 /** The upload limits, shown under the drop zone and editable by the team. */
 function RulesLine() {
-  const [rules, setLocal] = useState<UploadRules | null>(null);
-  const [editing, setEditing] = useState(false);
-  const shown = rules ?? (typeof window === "undefined" ? null : getRules());
-  if (!shown) return null;
-  const num = (k: keyof UploadRules) => (
-    <input
-      className="input"
-      type="number"
-      min={0}
-      value={shown[k]}
-      style={{ width: 76, padding: "4px 8px" }}
-      onChange={(e) => setLocal({ ...shown, [k]: Math.max(0, Number(e.target.value) || 0) })}
-    />
-  );
-  if (!editing) {
+  const [draft, setDraft] = useState<Record<keyof UploadRules, string> | null>(null);
+  const rules = getRules();
+  if (!draft) {
     return (
       <p className="small muted" style={{ margin: "8px 0 0" }}>
-        Accepted: at least {shown.minKb} KB and {shown.minPx} px on the long side, up to {shown.maxMb} MB.{" "}
-        <button className="link-btn" onClick={() => setEditing(true)}>
+        Accepted: at least {rules.minKb} KB and {rules.minPx} px on the long side, up to {rules.maxMb} MB.{" "}
+        <button
+          className="link-btn"
+          onClick={() => setDraft({ minKb: String(rules.minKb), minPx: String(rules.minPx), maxMb: String(rules.maxMb) })}
+        >
           Change
         </button>
       </p>
     );
   }
+  const parsed = { minKb: Number(draft.minKb), minPx: Number(draft.minPx), maxMb: Number(draft.maxMb) };
+  const valid =
+    Object.values(draft).every((v) => v.trim() !== "") &&
+    parsed.minKb >= 0 &&
+    parsed.minPx >= 0 &&
+    parsed.maxMb > 0 &&
+    parsed.maxMb * 1024 > parsed.minKb;
+  const num = (k: keyof UploadRules) => (
+    <input
+      className="input"
+      type="number"
+      min={0}
+      step="any"
+      value={draft[k]}
+      style={{ width: 76, padding: "4px 8px" }}
+      onChange={(e) => setDraft({ ...draft, [k]: e.target.value })}
+    />
+  );
   return (
     <div className="rules-edit small">
       <label>Min size (KB) {num("minKb")}</label>
@@ -350,12 +359,17 @@ function RulesLine() {
       <label>Max size (MB) {num("maxMb")}</label>
       <button
         className="btn small primary"
+        disabled={!valid}
+        title={valid ? undefined : "Enter numbers; the maximum must be above 0 and above the minimum"}
         onClick={() => {
-          setRules(shown);
-          setEditing(false);
+          setRules(parsed);
+          setDraft(null);
         }}
       >
         Save
+      </button>
+      <button className="btn small ghost" onClick={() => setDraft(null)}>
+        Cancel
       </button>
     </div>
   );

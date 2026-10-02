@@ -17,7 +17,12 @@ export const RULES_EVENT = "sws:upload-rules";
 export function getRules(): UploadRules {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE) ?? "null") as Partial<UploadRules> | null;
-    return { ...DEFAULT_RULES, ...saved };
+    const ok = (v: unknown, min: number) => typeof v === "number" && Number.isFinite(v) && v >= min;
+    return {
+      minKb: ok(saved?.minKb, 0) ? saved!.minKb! : DEFAULT_RULES.minKb,
+      minPx: ok(saved?.minPx, 0) ? saved!.minPx! : DEFAULT_RULES.minPx,
+      maxMb: ok(saved?.maxMb, 0.01) ? saved!.maxMb! : DEFAULT_RULES.maxMb,
+    };
   } catch {
     return DEFAULT_RULES;
   }
