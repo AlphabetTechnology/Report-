@@ -6,7 +6,7 @@
  *
  * - A grid of cards side by side (e.g. Views / Reach / Interactions / Visits)
  *   is cut into one image per card, so each card can go to its own report section.
- * - Anything else is just trimmed to the cards (drops the page header and margins).
+ * - Anything else only has plain margins trimmed; nothing with content is ever cut.
  */
 
 export interface Rect {
@@ -21,13 +21,49 @@ export type CardLayout =
   | { type: "trim"; rect: Rect }
   | { type: "none" };
 
-const union = (rs: Rect[]): Rect => {
-  const x0 = Math.min(...rs.map((r) => r.x));
-  const y0 = Math.min(...rs.map((r) => r.y));
-  const x1 = Math.max(...rs.map((r) => r.x + r.w));
-  const y1 = Math.max(...rs.map((r) => r.y + r.h));
-  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
-};
+/**
+ * The box around everything that isn't plain background (the colour along the
+ * image's edges), plus a little breathing room.
+ */
+function contentBounds(d: Uint8ClampedArray, W: number, H: number): Rect | null {
+  const edge: number[][] = [];
+  for (let x = 0; x < W; x += 4) edge.push([x, 0], [x, H - 1]);
+  for (let y = 0; y < H; y += 4) edge.push([0, y], [W - 1, y]);
+  const counts = new Map<number, number>();
+  let best = 0;
+  let bg = 0;
+  for (const [x, y] of edge) {
+    const p = (y * W + x) * 4;
+    const key = ((d[p] >> 3) << 10) | ((d[p + 1] >> 3) << 5) | (d[p + 2] >> 3);
+    const n = (counts.get(key) ?? 0) + 1;
+    counts.set(key, n);
+    if (n > best) {
+      best = n;
+      bg = key;
+    }
+  }
+  // Without a clear background colour there is no plain margin to trim.
+  if (best < edge.length * 0.5) return null;
+  const br = ((bg >> 10) & 31) * 8 + 4;
+  const bgG = ((bg >> 5) & 31) * 8 + 4;
+  const bb = (bg & 31) * 8 + 4;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const p = (y * W + x) * 4;
+      if (Math.abs(d[p] - br) + Math.abs(d[p + 1] - bgG) + Math.abs(d[p + 2] - bb) <= 18) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  if (x1 < 0) return null;
+  const pad = Math.max(2, Math.round(Math.max(W, H) * 0.006));
+  const x = Math.max(0, x0 - pad);
+  const y = Math.max(0, y0 - pad);
+  return { x, y, w: Math.min(W, x1 + pad + 1) - x, h: Math.min(H, y1 + pad + 1) - y };
+}
 
 const MAX_SIDE = 1000; // detection runs on a smaller copy; rects are scaled back
 
@@ -98,14 +134,18 @@ export function detectLayout(white: Uint8Array, W: number, H: number): Rect[] {
 }
 
 /** True when at least two cards sit side by side (a dashboard grid). */
-function isGrid(rects: Rect[]): boolean {
+function isGrid(rects: Rect[], W: number, H: number): boolean {
+  // Dashboard cards are big and of similar width side by side (2–4 across). The
+  // columns of a table (rank, thumbnail, title, numbers) are not cards.
+  const big = (r: Rect) => r.w >= W * 0.22 && r.h >= H * 0.1;
   for (let i = 0; i < rects.length; i++) {
     for (let j = i + 1; j < rects.length; j++) {
       const a = rects[i];
       const b = rects[j];
       const overlap = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
       const apart = a.x + a.w <= b.x || b.x + b.w <= a.x;
-      if (apart && overlap > Math.min(a.h, b.h) * 0.5) return true;
+      const similar = Math.max(a.w, b.w) / Math.min(a.w, b.w) <= 1.8;
+      if (big(a) && big(b) && apart && similar && overlap > Math.min(a.h, b.h) * 0.5) return true;
     }
   }
   return false;
@@ -138,14 +178,16 @@ export async function findCards(dataUrl: string): Promise<CardLayout> {
 
   // A phone screenshot is never cut up: its "grid" is a grid of posts, not cards.
   const phoneShaped = img.width / img.height < 0.65;
-  if (rects.length >= 2 && isGrid(rects) && !phoneShaped) {
+  if (rects.length >= 2 && isGrid(rects, W, H) && !phoneShaped) {
     const cards = rects.sort((a, b) => a.y - b.y || a.x - b.x).map(back);
     return { type: "grid", cards };
   }
 
-  // Otherwise trim to the area covered by cards if that removes a real margin.
-  const all = union(rects);
-  if (all.w * all.h > W * H * 0.92) return { type: "none" };
+  // A phone screenshot is shown whole in the phone frame: never trimmed.
+  if (phoneShaped) return { type: "none" };
+  // Otherwise only trim plain margins: never cut anything that has content in it.
+  const all = contentBounds(data, W, H);
+  if (!all || all.w * all.h > W * H * 0.92) return { type: "none" };
   return { type: "trim", rect: back(all) };
 }
 
