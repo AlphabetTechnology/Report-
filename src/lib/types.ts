@@ -239,6 +239,8 @@ export interface Report {
   proofreadAt?: number;
   /** Numbers flagged by the number check that the team confirmed are right ("fieldId|number"). */
   checkedNumbers?: string[];
+  /** Wording flagged by the tone check that the team decided to keep ("fieldId|phrase"). */
+  checkedTone?: string[];
   /** Required checklist screenshots the team marked as not available for this client ("platform|label"). */
   notAvailable?: string[];
   /** Claude spend on this report so far, in US dollars (counted in the browser). */

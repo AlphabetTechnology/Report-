@@ -4,7 +4,7 @@
  * the Aakaar September 2026 report. Claude copies its approach, not its words.
  */
 export const STYLE_EXAMPLE = `EXECUTIVE SUMMARY
-September was a quieter month for Aakaar in reach, but the posts that worked were clear: **simple communication tips for parents** and **festival posts** did far better than everything else.
+September showed clearly what works for Aakaar: **simple communication tips for parents** and **festival posts** drew the most views and interactions.
 
 On Facebook, **296 views and 27 interactions** came in without any paid promotion. Instagram reached **253 accounts** and drew 1,418 views and 58 interactions, so it remains where most new parents find you. Almost all of your audience is in India, with Navi Mumbai and Mumbai well ahead.
 
@@ -17,16 +17,16 @@ Reach: 253
 Instagram reached 253 accounts. Reach was highest on the days we posted **communication tips for parents**.
 
 ACCOUNT VIEWS - Facebook
-Views: 296 / 3-Second Video Views: 10 / Watch Time: 1m 26s
-All 296 views were organic. Video is still a small part of the picture, with only 10 three-second views, so **short videos are an easy win** for next month.
+Views: 296 / Watch Time: 1m 26s
+All 296 views were organic, earned without any paid promotion. **Short videos** are the next step to grow this further.
 
 ENGAGEMENT - Instagram
 Content Interactions: 58
 Instagram brought in 58 interactions, about twice Facebook's. Most came from **the two posts on early communication**.
 
 ACCOUNT VISITS - Facebook
-Page Visits: 86 / New Follows: 0
-86 people visited the Facebook page, but **none of them followed** this month. Clearer calls to action should help turn visits into follows.
+Page Visits: 86
+**86 people visited the Facebook page** this month to find out more about Aakaar, a good base of interest to build on.
 
 AUDIENCE - Instagram
 Lifetime Followers: 224 / Gender: Women 74.9%, Men 25.1%
@@ -45,8 +45,8 @@ Current Situation: The two communication tip posts were your most viewed on Inst
 Implementation: We will turn this into **a weekly tip series** for parents of toddlers.
 
 Turn Visits Into Follows
-Current Situation: Facebook had 86 page visits and no new follows.
-Implementation: We will add **a clear "follow for weekly tips" line** to posts and the page intro.
+Current Situation: 86 people visited the Facebook page this month to learn more about Aakaar.
+Implementation: We will add **a clear "follow for weekly tips" line** to posts and the page intro, so more visitors become followers.
 
 CONCLUSION
 September showed what Aakaar's audience wants: **useful, simple advice for parents**, plus a few well-timed festival posts.

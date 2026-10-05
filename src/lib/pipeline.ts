@@ -27,8 +27,9 @@ import {
  *   3: dashboards cut into cards
  *   4: bold themes, natural tone, one figure per metric
  *   5: LinkedIn, Pinterest, Google Business Profile; Activities & Engagement
+ *   6: positive, agency-side tone (no declines, nothing negative in bold)
  */
-export const PIPELINE_VERSION = 5;
+export const PIPELINE_VERSION = 6;
 
 /**
  * Version of the screenshot reading alone. "Update report" only re-reads

@@ -36,13 +36,14 @@ Check every field for:
 - style: awkward, repetitive or unclear wording, wrong capitalisation of platform names (Facebook, Instagram, TikTok, YouTube, Reels), inconsistent dashes (use – for ranges, — between a post and its stats)
 - consistency: the same metric labelled differently across the report, or the client's name spelled differently (correct name: "${clientName}")
 - tone: phrases that sound machine-written rather than written by a person, e.g. "continued to", "maintained", "showcasing", "highlighting", "reinforcing", "fostering", "leveraging", "valuable", "notably", "significant", "resonate", "it's worth noting", "furthermore", "not only … but also", sentences ending in "-ing" commentary ("…, indicating strong interest"). Suggest a plainer, specific rewording; use type "style".
+- negative: wording that points out a decline or a weak result to the client ("views went down", "dropped", "fell", "decreased", "lower than last month", "only 8", "no new follows", "a quieter month"), or a negative phrase in **bold**. The report goes from the agency to its client and must read positively. Suggest a rewording that leads with what went well or frames it as next month's opportunity, keeping every number unchanged, or that leaves the negative point out; use type "style".
 - dates: written the ${english === "en-GB" ? "UK way (14 September 2026, 1 – 30 September)" : "US way (September 14, 2026, September 1 – 30)"}
 - number: a number in the text that does not match the screenshot data provided
 
 Rules:
 - "original" must be an exact substring of that field's text (copy it character for character, including **bold markers**), short but long enough to be unique in that field.
 - "replacement" is the corrected version of exactly that substring.
-- Keep **bold markers** intact: never remove them, and keep them around the same phrase.
+- Keep **bold markers** intact: never remove them, and keep them around the same phrase. The one exception: remove the markers from a negative phrase.
 - Keep the agency's meaning and tone; do not rewrite sentences that are already correct. Only suggest a style change when it is a clear improvement.
 - "reason" is a short explanation for the team, e.g. "US spelling; this client uses UK English".
 - Return an empty list if the text is already correct.`;

@@ -1,4 +1,4 @@
-import { numberIssues, shotIssues } from "./checks";
+import { numberIssues, shotIssues, toneIssues } from "./checks";
 import { missingShots } from "./guide";
 import type { Report } from "./types";
 
@@ -20,7 +20,7 @@ export function reportProgress(r: Report): Progress {
   const missing = missingShots(r).length;
   const shots = r.shots.length > 0 && r.shots.every((s) => s.status === "done") && missing === 0;
   const text = !!r.text;
-  const toCheck = shotIssues(r).length + numberIssues(r).length;
+  const toCheck = shotIssues(r).length + numberIssues(r).length + toneIssues(r).length;
   const proofDone = text && !!r.proofreadAt && r.suggestions.length === 0;
   const proofread = proofDone && toCheck === 0 && missing === 0;
   const done = [shots, text, proofread].filter(Boolean).length;

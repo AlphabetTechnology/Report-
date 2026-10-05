@@ -3,8 +3,9 @@
 import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Icon from "@/components/Icon";
-import { numberIssues, shotIssues } from "@/lib/checks";
+import { numberIssues, shotIssues, toneIssues } from "@/lib/checks";
 import NumberCheck from "./NumberCheck";
+import ToneCheck from "./ToneCheck";
 import { proofreadText } from "@/lib/pipeline";
 import { getAt, listFields, setAt } from "@/lib/fields";
 import type { Client, Report, Suggestion } from "@/lib/types";
@@ -110,6 +111,7 @@ export default function ProofreadPanel({
       </div>
       {error && <div className="notice err">{error}</div>}
       <NumberCheck report={report} update={update} />
+      <ToneCheck report={report} update={update} />
       {checked && !busy && report.suggestions.length > 0 ? null : checked && !busy && shotIssues(report).length > 0 && (
         <div className="notice warn">
           <Icon name="image" size={16} />
@@ -119,7 +121,7 @@ export default function ProofreadPanel({
           </span>
         </div>
       )}
-      {checked && !busy && report.suggestions.length === 0 && !numberIssues(report).length && !shotIssues(report).length && (
+      {checked && !busy && report.suggestions.length === 0 && !numberIssues(report).length && !toneIssues(report).length && !shotIssues(report).length && (
         <div className="notice" style={{ background: "var(--ok-soft)", color: "#0b6b3e" }}>
           <Icon name="checkCircle" size={16} />
           No issues left. The report is ready to send.

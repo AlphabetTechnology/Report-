@@ -155,3 +155,51 @@ export function numberIssues(report: Report): NumberIssue[] {
   }
   return out;
 }
+
+/* ---------- wording that points out a drop to the client ---------- */
+
+export interface ToneIssue {
+  fieldId: string;
+  label: string;
+  phrase: string;
+  before: string;
+  after: string;
+  /** The phrase is in bold, so it would stand out in the report. */
+  bold: boolean;
+}
+
+/**
+ * Words that point a client at a decline or a weak result. The report goes from
+ * the agency to the client, so Claude is told to leave these out; this catches it
+ * if it doesn't. "lower back" (pain) and the like are not flagged.
+ */
+const NEGATIVE =
+  /\b(?:went down|gone down|down by|down from|dropp(?:ed|ing)|drops?(?!-)|fell|falling|decreas\w*|declin\w*|lower than|(?:was|were) lower|fewer|weak\w*|poor(?:ly|er)?|quiet(?:er)? month|struggl\w*|disappoint\w*|underperform\w*|none of|no new|only \d[\d,.]*|just \d[\d,.]*|zero)\b/gi;
+
+export const toneKey = (i: ToneIssue) => `${i.fieldId}|${i.phrase.toLowerCase()}`;
+
+export function toneIssues(report: Report): ToneIssue[] {
+  if (!report.text) return [];
+  const kept = new Set(report.checkedTone ?? []);
+  const out: ToneIssue[] = [];
+  for (const f of listFields(report.text)) {
+    for (const m of f.text.matchAll(NEGATIVE)) {
+      const at = m.index ?? 0;
+      const end = at + m[0].length;
+      const opened = (f.text.slice(0, at).match(/\*\*/g) ?? []).length;
+      const from = Math.max(0, f.text.lastIndexOf(" ", Math.max(0, at - 50)));
+      const to = f.text.indexOf(" ", Math.min(f.text.length, end + 50));
+      const plain = (t: string) => t.replace(/\*\*/g, "");
+      const issue: ToneIssue = {
+        fieldId: f.id,
+        label: f.label,
+        phrase: m[0],
+        before: (from > 0 ? "…" : "") + plain(f.text.slice(from, at)).trimStart(),
+        after: plain(f.text.slice(end, to < 0 ? undefined : to)).trimEnd() + (to < 0 ? "" : "…"),
+        bold: opened % 2 === 1,
+      };
+      if (!kept.has(toneKey(issue))) out.push(issue);
+    }
+  }
+  return out;
+}

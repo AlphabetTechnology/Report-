@@ -4,6 +4,7 @@ import { errorMessage } from "@/lib/errors";
 import { useState } from "react";
 import Icon from "@/components/Icon";
 import NumberCheck from "./NumberCheck";
+import ToneCheck from "./ToneCheck";
 import { shotIssues } from "@/lib/checks";
 import { missingShots } from "@/lib/guide";
 import { applyCorrections, PIPELINE_VERSION, writeReportText } from "@/lib/pipeline";
@@ -158,6 +159,7 @@ export default function TextPanel({
         </div>
       )}
       <NumberCheck report={report} update={update} />
+      <ToneCheck report={report} update={update} />
 
       {t && (
         <>
